@@ -9,7 +9,7 @@ from behavior_core.config.settings import get_settings
 
 settings = get_settings()
 
-# 创建 Faust 应用
+# 创建 Faust 应用 (包含背压处理配置)
 app = faust.App(
     id="behavior-sense-stream",
     broker=settings.pulsar_url,
@@ -22,6 +22,11 @@ app = faust.App(
     table_standby_replicas=0,
     broker_session_timeout=timedelta(seconds=30),
     broker_heartbeat_interval=timedelta(seconds=10),
+    # 背压处理配置 - 防止内存溢出和服务雪崩
+    stream_buffer_maxsize=10000,  # 限制缓冲区大小
+    worker_max_tasks=1000,  # 限制并发任务数
+    # 流量控制
+    stream_processing_timeout=timedelta(minutes=5),  # 处理超时
 )
 
 # 定义 Topic
