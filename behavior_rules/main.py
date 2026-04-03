@@ -10,8 +10,12 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 
 from behavior_core.config.settings import settings
+from behavior_core.middleware.tracing import TraceIDMiddleware
+from behavior_core.middleware.rate_limit import RateLimitMiddleware
+from behavior_core.metrics import get_metrics, set_service_info
 from behavior_rules.models import (
     Rule,
     RuleCreate,
@@ -76,10 +80,24 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# 添加 CORS 中间件
+# 设置服务信息
+set_service_info("behavior-rules", "1.0.0")
+
+# 添加 TraceID 中间件
+app.add_middleware(TraceIDMiddleware)
+
+# 添加限流中间件
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=100,
+    window_seconds=60,
+)
+
+# 配置 CORS (从配置读取允许的域名)
+cors_origins = settings.cors_origins.split(",") if settings.cors_origins else ["*"] if settings.debug else []
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -118,6 +136,17 @@ async def readiness_check() -> dict[str, Any]:
         "ready": True,
         "service": "behavior-rules"
     }
+
+
+@app.get("/metrics", response_class=PlainTextResponse, tags=["Monitoring"])
+async def metrics_endpoint() -> str:
+    """
+    Prometheus 指标端点
+
+    Returns:
+        Prometheus 格式的监控指标
+    """
+    return get_metrics()
 
 
 # ==================== 规则管理 API ====================

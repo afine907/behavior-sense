@@ -49,6 +49,15 @@ class Settings(BaseSettings):
     es_user: str = ""
     es_password: SecretStr = SecretStr("")
 
+    # JWT 配置
+    jwt_secret_key: SecretStr = SecretStr("change-this-secret-key-in-production")  # 必须通过环境变量设置
+    jwt_algorithm: str = "HS256"
+    jwt_expire_hours: int = 24
+    jwt_issuer: str = "behavior-sense"
+
+    # CORS 配置
+    cors_origins: str = ""  # 逗号分隔的允许域名列表
+
     # 服务端口配置
     mock_port: int = 8001
     rules_port: int = 8002

@@ -8,9 +8,13 @@ from datetime import datetime
 import redis.asyncio as redis
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 
 from behavior_core.config.settings import get_settings
 from behavior_core.utils.logging import setup_logging, get_logger
+from behavior_core.middleware.tracing import TraceIDMiddleware
+from behavior_core.middleware.rate_limit import RateLimitMiddleware
+from behavior_core.metrics import get_metrics, set_service_info
 from behavior_audit.routers.audit import router as audit_router
 from behavior_audit.repositories.audit_repo import init_db, get_engine
 
@@ -64,10 +68,24 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # 配置 CORS
+    # 设置服务信息
+    set_service_info("behavior-audit", "1.0.0")
+
+    # 添加 TraceID 中间件
+    app.add_middleware(TraceIDMiddleware)
+
+    # 添加限流中间件
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests_per_minute=100,
+        window_seconds=60,
+    )
+
+    # 配置 CORS (从配置读取允许的域名)
+    cors_origins = settings.cors_origins.split(",") if settings.cors_origins else ["*"] if settings.debug else []
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.debug else [],
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -86,6 +104,12 @@ def create_app() -> FastAPI:
             "timestamp": datetime.utcnow().isoformat(),
             "version": "1.0.0",
         }
+
+    # Prometheus 指标端点
+    @app.get("/metrics", response_class=PlainTextResponse, tags=["monitoring"])
+    async def metrics_endpoint() -> str:
+        """Prometheus 指标端点"""
+        return get_metrics()
 
     # 根路径
     @app.get("/", tags=["root"])

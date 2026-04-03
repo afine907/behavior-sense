@@ -3,15 +3,18 @@ BehaviorSense Insight 服务
 洞察分析服务 - 标签管理、用户画像、分析报表
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 import redis.asyncio as redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from behavior_core.config.settings import get_settings
 from behavior_core.utils.logging import setup_logging, get_logger
+from behavior_core.middleware.tracing import TraceIDMiddleware
+from behavior_core.middleware.rate_limit import RateLimitMiddleware
+from behavior_core.metrics import get_metrics, set_service_info, increment_request_counter
 from behavior_insight.services.tag_service import TagService
 from behavior_insight.repositories.user_repo import UserRepository, init_database
 from behavior_insight.routers import tags, profile
@@ -71,10 +74,24 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 配置 CORS
+# 设置服务信息
+set_service_info("behavior-insight", "1.0.0")
+
+# 添加 TraceID 中间件
+app.add_middleware(TraceIDMiddleware)
+
+# 添加限流中间件
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=100,
+    window_seconds=60,
+)
+
+# 配置 CORS (从配置读取允许的域名)
+cors_origins = settings.cors_origins.split(",") if settings.cors_origins else ["*"] if settings.debug else []
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -147,6 +164,16 @@ async def health_check(request: Request) -> HealthResponse:
         redis=redis_status,
         database=db_status,
     )
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def metrics_endpoint() -> str:
+    """
+    Prometheus 指标端点
+
+    返回 Prometheus 格式的监控指标
+    """
+    return get_metrics()
 
 
 @app.get("/")
