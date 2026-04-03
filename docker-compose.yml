@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # ===== 消息队列 =====
+  pulsar:
+    image: apachepulsar/pulsar:2.11.2
+    container_name: behavior-pulsar
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    environment:
+      - PULSAR_PREFIX_clusterName=behavior-sense
+    networks:
+      - behavior-net
+
+  # ===== 数据库 =====
+  postgres:
+    image: postgres:15-alpine
+    container_name: behavior-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=behavior_sense
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - behavior-net
+
+  # ===== 缓存 =====
+  redis:
+    image: redis:7-alpine
+    container_name: behavior-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - behavior-net
+
+  # ===== 分析存储 =====
+  clickhouse:
+    image: clickhouse/clickhouse-server:23-alpine
+    container_name: behavior-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    networks:
+      - behavior-net
+
+  # ===== 搜索引擎 =====
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: behavior-es
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - behavior-net
+
+  # ===== 监控 =====
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: behavior-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - behavior-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: behavior-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - behavior-net
+
+volumes:
+  postgres-data:
+  redis-data:
+  clickhouse-data:
+  es-data:
+  grafana-data:
+
+networks:
+  behavior-net:
+    driver: bridge

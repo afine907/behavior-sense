@@ -1,0 +1,86 @@
+# 高价值用户规则
+id: high_value_user
+name: 高价值用户
+description: 识别高价值用户，购买频次和金额达到阈值
+condition: purchase_count >= 5 and total_amount > 1000
+priority: 1
+enabled: true
+actions:
+  - type: TAG_USER
+    params:
+      tags: ["high_value", "vip"]
+      action: add
+      source: rule
+tags:
+  - user_segment
+  - value
+---
+# 登录风险检测规则
+id: login_risk
+name: 登录风险检测
+description: 检测频繁登录失败行为
+condition: login_fail_count > 5
+priority: 2
+enabled: true
+actions:
+  - type: TRIGGER_AUDIT
+    params:
+      level: HIGH
+      reason: "频繁登录失败，可能存在账号风险"
+  - type: TAG_USER
+    params:
+      tags: ["suspicious", "login_risk"]
+tags:
+  - security
+  - risk
+---
+# 异常高频访问规则
+id: high_frequency_access
+name: 异常高频访问
+description: 检测异常高频访问行为
+condition: event_count > 1000 and view_count > 800
+priority: 2
+enabled: true
+actions:
+  - type: TRIGGER_AUDIT
+    params:
+      level: MEDIUM
+      reason: "异常高频访问，可能是爬虫行为"
+  - type: TAG_USER
+    params:
+      tags: ["bot_suspected"]
+tags:
+  - security
+  - bot_detection
+---
+# 新用户引导规则
+id: new_user_onboarding
+name: 新用户引导
+description: 识别新用户并打标签
+condition: event_count < 10 and purchase_count == 0
+priority: 0
+enabled: true
+actions:
+  - type: TAG_USER
+    params:
+      tags: ["new_user", "onboarding"]
+      source: rule
+tags:
+  - user_segment
+  - onboarding
+---
+# 高流失风险用户规则
+id: churn_risk_user
+name: 高流失风险用户
+description: 识别可能流失的用户
+condition: days_since_last_visit > 30 and purchase_count > 0
+priority: 1
+enabled: true
+actions:
+  - type: TAG_USER
+    params:
+      tags: ["churn_risk"]
+      source: rule
+tags:
+  - user_segment
+  - retention
