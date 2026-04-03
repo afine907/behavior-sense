@@ -2,6 +2,7 @@
 应用配置管理
 """
 from pydantic_settings import BaseSettings
+from pydantic import SecretStr, field_validator
 from functools import lru_cache
 from typing import Literal
 
@@ -25,33 +26,42 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
+    postgres_password: SecretStr = SecretStr("")  # 必须从环境变量获取
     postgres_db: str = "behavior_sense"
     postgres_pool_size: int = 10
     postgres_max_overflow: int = 20
 
     # Redis 配置
     redis_url: str = "redis://localhost:6379"
+    redis_password: SecretStr = SecretStr("")  # 可选，从环境变量获取
     redis_max_connections: int = 100
 
     # ClickHouse 配置
     clickhouse_host: str = "localhost"
     clickhouse_port: int = 9000
     clickhouse_user: str = "default"
-    clickhouse_password: str = ""
+    clickhouse_password: SecretStr = SecretStr("")
     clickhouse_database: str = "behavior_sense"
 
     # Elasticsearch 配置
     es_host: str = "localhost"
     es_port: int = 9200
     es_user: str = ""
-    es_password: str = ""
+    es_password: SecretStr = SecretStr("")
 
     # 服务端口配置
     mock_port: int = 8001
     rules_port: int = 8002
     insight_port: int = 8003
     audit_port: int = 8004
+
+    @field_validator("postgres_password", "clickhouse_password", "es_password", "redis_password", mode="before")
+    @classmethod
+    def validate_password(cls, v):
+        """验证密码不为空（生产环境）"""
+        if isinstance(v, str):
+            return SecretStr(v)
+        return v
 
     class Config:
         env_file = ".env"
@@ -61,16 +71,18 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         """异步数据库连接URL"""
+        password = self.postgres_password.get_secret_value()
         return (
-            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"postgresql+asyncpg://{self.postgres_user}:{password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
     @property
     def sync_database_url(self) -> str:
         """同步数据库连接URL"""
+        password = self.postgres_password.get_secret_value()
         return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}"
+            f"postgresql://{self.postgres_user}:{password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 

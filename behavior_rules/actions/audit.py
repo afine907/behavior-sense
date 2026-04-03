@@ -4,6 +4,7 @@
 实现触发人工审核的功能，通过调用 audit 服务 API 创建审核工单。
 """
 import logging
+import asyncio
 from datetime import datetime
 from typing import Any
 from enum import Enum
@@ -14,6 +15,37 @@ from behavior_core.config.settings import settings
 
 
 logger = logging.getLogger(__name__)
+
+
+# 共享 HTTP 客户端实例（懒加载）
+_audit_client: httpx.AsyncClient | None = None
+
+
+async def get_audit_client() -> httpx.AsyncClient:
+    """
+    获取共享的 HTTP 客户端实例（用于 audit 服务）
+
+    复用连接，避免每次请求都创建新连接。
+    """
+    global _audit_client
+    if _audit_client is None or _audit_client.is_closed:
+        _audit_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(10.0, connect=5.0),
+            limits=httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=100,
+                keepalive_expiry=30.0,
+            ),
+        )
+    return _audit_client
+
+
+async def close_audit_client() -> None:
+    """关闭共享的 HTTP 客户端"""
+    global _audit_client
+    if _audit_client is not None:
+        await _audit_client.aclose()
+        _audit_client = None
 
 
 class AuditLevel(str, Enum):
@@ -89,38 +121,38 @@ async def trigger_audit(params: dict[str, Any], context: dict[str, Any]) -> dict
         order_request["assignee"] = assignee
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(
-                f"{base_url}/api/audit/order",
-                json=order_request
+        client = await get_audit_client()
+        response = await client.post(
+            f"{base_url}/api/audit/order",
+            json=order_request
+        )
+
+        if response.status_code >= 400:
+            error_detail = response.text
+            logger.error(
+                f"Failed to create audit order for user {user_id}: "
+                f"status={response.status_code}, error={error_detail}"
+            )
+            raise AuditTriggerError(
+                f"Audit service returned {response.status_code}: {error_detail}"
             )
 
-            if response.status_code >= 400:
-                error_detail = response.text
-                logger.error(
-                    f"Failed to create audit order for user {user_id}: "
-                    f"status={response.status_code}, error={error_detail}"
-                )
-                raise AuditTriggerError(
-                    f"Audit service returned {response.status_code}: {error_detail}"
-                )
+        result = response.json()
+        order_id = result.get("order_id") or result.get("id")
 
-            result = response.json()
-            order_id = result.get("order_id") or result.get("id")
+        logger.info(
+            f"Created audit order {order_id} for user {user_id} "
+            f"with level {audit_level.value}"
+        )
 
-            logger.info(
-                f"Created audit order {order_id} for user {user_id} "
-                f"with level {audit_level.value}"
-            )
-
-            return {
-                "status": "success",
-                "order_id": order_id,
-                "user_id": user_id,
-                "audit_level": audit_level.value,
-                "reason": reason,
-                "response": result
-            }
+        return {
+            "status": "success",
+            "order_id": order_id,
+            "user_id": user_id,
+            "audit_level": audit_level.value,
+            "reason": reason,
+            "response": result
+        }
 
     except httpx.TimeoutException:
         logger.error(f"Timeout while creating audit order for user {user_id}")
@@ -150,20 +182,20 @@ async def get_audit_order(
     base_url = f"http://{audit_host}:{port}"
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                f"{base_url}/api/audit/order/{order_id}"
+        client = await get_audit_client()
+        response = await client.get(
+            f"{base_url}/api/audit/order/{order_id}"
+        )
+
+        if response.status_code == 404:
+            raise AuditTriggerError(f"Audit order not found: {order_id}")
+
+        if response.status_code >= 400:
+            raise AuditTriggerError(
+                f"Failed to get audit order: status={response.status_code}"
             )
 
-            if response.status_code == 404:
-                raise AuditTriggerError(f"Audit order not found: {order_id}")
-
-            if response.status_code >= 400:
-                raise AuditTriggerError(
-                    f"Failed to get audit order: status={response.status_code}"
-                )
-
-            return response.json()
+        return response.json()
 
     except httpx.TimeoutException:
         raise AuditTriggerError("Audit service timeout")
@@ -191,18 +223,18 @@ async def get_pending_audits(
     base_url = f"http://{audit_host}:{port}"
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                f"{base_url}/api/audit/orders/todo",
-                params={"limit": limit}
+        client = await get_audit_client()
+        response = await client.get(
+            f"{base_url}/api/audit/orders/todo",
+            params={"limit": limit}
+        )
+
+        if response.status_code >= 400:
+            raise AuditTriggerError(
+                f"Failed to get pending audits: status={response.status_code}"
             )
 
-            if response.status_code >= 400:
-                raise AuditTriggerError(
-                    f"Failed to get pending audits: status={response.status_code}"
-                )
-
-            return response.json()
+        return response.json()
 
     except httpx.TimeoutException:
         raise AuditTriggerError("Audit service timeout")
@@ -238,18 +270,18 @@ async def submit_review(
         request_body["reviewer_note"] = reviewer_note
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.put(
-                f"{base_url}/api/audit/order/{order_id}/review",
-                json=request_body
+        client = await get_audit_client()
+        response = await client.put(
+            f"{base_url}/api/audit/order/{order_id}/review",
+            json=request_body
+        )
+
+        if response.status_code >= 400:
+            raise AuditTriggerError(
+                f"Failed to submit review: status={response.status_code}"
             )
 
-            if response.status_code >= 400:
-                raise AuditTriggerError(
-                    f"Failed to submit review: status={response.status_code}"
-                )
-
-            return response.json()
+        return response.json()
 
     except httpx.TimeoutException:
         raise AuditTriggerError("Audit service timeout")
@@ -263,7 +295,7 @@ async def batch_trigger_audit(
     audit_port: int | None = None
 ) -> list[dict[str, Any]]:
     """
-    批量触发审核
+    批量触发审核（并发处理）
 
     Args:
         users: 用户列表，每项包含 user_id 和相关参数
@@ -273,51 +305,51 @@ async def batch_trigger_audit(
     Returns:
         批量操作结果
     """
-    results = []
     port = audit_port or settings.audit_port
     base_url = f"http://{audit_host}:{port}"
+    client = await get_audit_client()
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        for item in users:
-            user_id = item.get("user_id")
-            if not user_id:
-                results.append({
-                    "user_id": None,
-                    "status": "error",
-                    "error": "Missing user_id"
-                })
-                continue
+    async def trigger_single(item: dict[str, Any]) -> dict[str, Any]:
+        user_id = item.get("user_id")
+        if not user_id:
+            return {
+                "user_id": None,
+                "status": "error",
+                "error": "Missing user_id"
+            }
 
-            try:
-                response = await client.post(
-                    f"{base_url}/api/audit/order",
-                    json={
-                        "user_id": user_id,
-                        "audit_level": item.get("level", "MEDIUM"),
-                        "reason": item.get("reason", "Batch audit"),
-                        "trigger_data": item.get("trigger_data", {})
-                    }
-                )
+        try:
+            response = await client.post(
+                f"{base_url}/api/audit/order",
+                json={
+                    "user_id": user_id,
+                    "audit_level": item.get("level", "MEDIUM"),
+                    "reason": item.get("reason", "Batch audit"),
+                    "trigger_data": item.get("trigger_data", {})
+                }
+            )
 
-                if response.status_code >= 400:
-                    results.append({
-                        "user_id": user_id,
-                        "status": "error",
-                        "status_code": response.status_code
-                    })
-                else:
-                    result = response.json()
-                    results.append({
-                        "user_id": user_id,
-                        "status": "success",
-                        "order_id": result.get("order_id") or result.get("id")
-                    })
-
-            except Exception as e:
-                results.append({
+            if response.status_code >= 400:
+                return {
                     "user_id": user_id,
                     "status": "error",
-                    "error": str(e)
-                })
+                    "status_code": response.status_code
+                }
+            else:
+                result = response.json()
+                return {
+                    "user_id": user_id,
+                    "status": "success",
+                    "order_id": result.get("order_id") or result.get("id")
+                }
 
-    return results
+        except Exception as e:
+            return {
+                "user_id": user_id,
+                "status": "error",
+                "error": str(e)
+            }
+
+    # 并发处理
+    results = await asyncio.gather(*[trigger_single(item) for item in users])
+    return list(results)

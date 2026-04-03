@@ -6,6 +6,9 @@
 import asyncio
 import time
 import logging
+import ast
+import operator
+import threading
 from typing import Any, Callable, Coroutine
 from collections.abc import Awaitable
 
@@ -174,7 +177,8 @@ class RuleEngine:
         """
         安全地评估条件表达式
 
-        使用受限的执行环境，防止恶意代码执行。
+        使用 AST 解析替代 eval()，只允许有限的表达式类型，
+        防止恶意代码执行。
 
         Args:
             condition: Python 条件表达式
@@ -187,34 +191,9 @@ class RuleEngine:
             ConditionEvalError: 条件评估失败
         """
         try:
-            # 限制可用的内置函数和名称
-            allowed_builtins = {
-                "True": True,
-                "False": False,
-                "None": None,
-                "abs": abs,
-                "len": len,
-                "max": max,
-                "min": min,
-                "sum": sum,
-                "any": any,
-                "all": all,
-                "isinstance": isinstance,
-                "str": str,
-                "int": int,
-                "float": float,
-                "bool": bool,
-                "list": list,
-                "dict": dict,
-                "set": set,
-                "tuple": tuple,
-            }
-
-            # 创建安全的执行环境
-            safe_globals = {"__builtins__": allowed_builtins}
-            safe_locals = {**context}
-
-            result = eval(condition, safe_globals, safe_locals)
+            # 解析条件表达式为 AST
+            tree = ast.parse(condition, mode='eval')
+            result = self._eval_ast_node(tree.body, context)
             return bool(result)
 
         except NameError as e:
@@ -226,6 +205,163 @@ class RuleEngine:
         except Exception as e:
             logger.error(f"Error evaluating condition: {e}")
             raise ConditionEvalError(f"Evaluation error: {e}")
+
+    def _eval_ast_node(self, node: ast.AST, context: dict[str, Any]) -> Any:
+        """
+        递归评估 AST 节点
+
+        只允许安全的节点类型，拒绝危险的调用。
+
+        Args:
+            node: AST 节点
+            context: 评估上下文
+
+        Returns:
+            评估结果
+
+        Raises:
+            ConditionEvalError: 遇到不允许的节点类型
+        """
+        # 允许的字面量
+        if isinstance(node, ast.Constant):
+            return node.value
+
+        if isinstance(node, ast.Num):  # Python 3.7 兼容
+            return node.n
+
+        if isinstance(node, ast.Str):  # Python 3.7 兼容
+            return node.s
+
+        if isinstance(node, (ast.True_, ast.False_)):
+            return isinstance(node, ast.True_)
+
+        if isinstance(node, ast.None_):
+            return None
+
+        # 允许变量名
+        if isinstance(node, ast.Name):
+            if node.id in context:
+                return context[node.id]
+            # 允许的内置常量
+            if node.id in ("True", "False", "None"):
+                return {"True": True, "False": False, "None": None}[node.id]
+            raise NameError(f"Undefined variable: {node.id}")
+
+        # 允许二元操作
+        if isinstance(node, ast.BinOp):
+            left = self._eval_ast_node(node.left, context)
+            right = self._eval_ast_node(node.right, context)
+            ops = {
+                ast.Add: operator.add,
+                ast.Sub: operator.sub,
+                ast.Mult: operator.mul,
+                ast.Div: operator.truediv,
+                ast.FloorDiv: operator.floordiv,
+                ast.Mod: operator.mod,
+                ast.Pow: operator.pow,
+            }
+            op_type = type(node.op)
+            if op_type in ops:
+                return ops[op_type](left, right)
+            raise ConditionEvalError(f"Unsupported binary operator: {op_type}")
+
+        # 允许一元操作
+        if isinstance(node, ast.UnaryOp):
+            operand = self._eval_ast_node(node.operand, context)
+            if isinstance(node.op, ast.Not):
+                return not operand
+            if isinstance(node.op, ast.USub):
+                return -operand
+            if isinstance(node.op, ast.UAdd):
+                return +operand
+            raise ConditionEvalError(f"Unsupported unary operator: {type(node.op)}")
+
+        # 允许比较操作
+        if isinstance(node, ast.Compare):
+            left = self._eval_ast_node(node.left, context)
+            for op, comparator in zip(node.ops, node.comparators):
+                right = self._eval_ast_node(comparator, context)
+                ops = {
+                    ast.Eq: operator.eq,
+                    ast.NotEq: operator.ne,
+                    ast.Lt: operator.lt,
+                    ast.LtE: operator.le,
+                    ast.Gt: operator.gt,
+                    ast.GtE: operator.ge,
+                    ast.In: lambda a, b: a in b,
+                    ast.NotIn: lambda a, b: a not in b,
+                }
+                op_type = type(op)
+                if op_type in ops:
+                    if not ops[op_type](left, right):
+                        return False
+                else:
+                    raise ConditionEvalError(f"Unsupported comparison operator: {op_type}")
+                left = right
+            return True
+
+        # 允许布尔操作
+        if isinstance(node, ast.BoolOp):
+            values = [self._eval_ast_node(v, context) for v in node.values]
+            if isinstance(node.op, ast.And):
+                return all(values)
+            if isinstance(node.op, ast.Or):
+                return any(values)
+            raise ConditionEvalError(f"Unsupported boolean operator: {type(node.op)}")
+
+        # 允许条件表达式 (三元运算符)
+        if isinstance(node, ast.IfExp):
+            test = self._eval_ast_node(node.test, context)
+            if test:
+                return self._eval_ast_node(node.body, context)
+            return self._eval_ast_node(node.orelse, context)
+
+        # 允许列表
+        if isinstance(node, ast.List):
+            return [self._eval_ast_node(el, context) for el in node.elts]
+
+        # 允许字典
+        if isinstance(node, ast.Dict):
+            keys = [self._eval_ast_node(k, context) for k in node.keys]
+            values = [self._eval_ast_node(v, context) for v in node.values]
+            return dict(zip(keys, values))
+
+        # 允许元组
+        if isinstance(node, ast.Tuple):
+            return tuple(self._eval_ast_node(el, context) for el in node.elts)
+
+        # 允许下标访问
+        if isinstance(node, ast.Subscript):
+            value = self._eval_ast_node(node.value, context)
+            slice_val = self._eval_ast_node(node.slice, context) if isinstance(node.slice, ast.AST) else node.slice
+            return value[slice_val]
+
+        # 允许属性访问 (受限)
+        if isinstance(node, ast.Attribute):
+            value = self._eval_ast_node(node.value, context)
+            attr = node.attr
+            # 只允许访问简单属性
+            if hasattr(value, attr) and not attr.startswith('_'):
+                return getattr(value, attr)
+            raise ConditionEvalError(f"Access to attribute '{attr}' is not allowed")
+
+        # 允许简单的函数调用 (len, str, int, float, bool, abs, max, min, sum, any, all)
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                func_name = node.func.id
+                allowed_funcs = {
+                    "len": len, "str": str, "int": int, "float": float,
+                    "bool": bool, "abs": abs, "max": max, "min": min,
+                    "sum": sum, "any": any, "all": all, "list": list,
+                    "dict": dict, "set": set, "tuple": tuple,
+                }
+                if func_name in allowed_funcs:
+                    args = [self._eval_ast_node(arg, context) for arg in node.args]
+                    return allowed_funcs[func_name](*args)
+            raise ConditionEvalError(f"Function call '{ast.dump(node.func)}' is not allowed")
+
+        # 拒绝所有其他节点类型
+        raise ConditionEvalError(f"Unsupported expression type: {type(node).__name__}")
 
     async def execute_actions(
         self,
@@ -377,11 +513,15 @@ class RuleEngine:
 
 # 全局规则引擎实例
 _engine: RuleEngine | None = None
+_engine_lock = threading.Lock()
 
 
 def get_rule_engine() -> RuleEngine:
-    """获取全局规则引擎实例"""
+    """获取全局规则引擎实例 (线程安全)"""
     global _engine
     if _engine is None:
-        _engine = RuleEngine()
+        with _engine_lock:
+            # 双重检查锁定
+            if _engine is None:
+                _engine = RuleEngine()
     return _engine

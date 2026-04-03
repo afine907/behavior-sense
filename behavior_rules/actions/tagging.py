@@ -5,6 +5,7 @@
 """
 import logging
 from typing import Any
+from contextlib import asynccontextmanager
 
 import httpx
 
@@ -12,6 +13,37 @@ from behavior_core.config.settings import settings
 
 
 logger = logging.getLogger(__name__)
+
+
+# 共享 HTTP 客户端实例（懒加载）
+_shared_client: httpx.AsyncClient | None = None
+
+
+async def get_shared_client() -> httpx.AsyncClient:
+    """
+    获取共享的 HTTP 客户端实例
+
+    复用连接，避免每次请求都创建新连接。
+    """
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(10.0, connect=5.0),
+            limits=httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=100,
+                keepalive_expiry=30.0,
+            ),
+        )
+    return _shared_client
+
+
+async def close_shared_client() -> None:
+    """关闭共享的 HTTP 客户端"""
+    global _shared_client
+    if _shared_client is not None:
+        await _shared_client.aclose()
+        _shared_client = None
 
 
 class TaggingError(Exception):
@@ -65,49 +97,51 @@ async def tag_user(params: dict[str, Any], context: dict[str, Any]) -> dict[str,
         request_body["ttl"] = ttl
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            if action == "add":
-                # 添加标签
-                response = await client.put(
-                    f"{base_url}/api/insight/user/{user_id}/tags",
-                    json=request_body
-                )
-            elif action == "remove":
-                # 移除标签
-                response = await client.request(
-                    "DELETE",
-                    f"{base_url}/api/insight/user/{user_id}/tags",
-                    json=request_body
-                )
-            elif action == "set":
-                # 设置标签（覆盖）
-                response = await client.post(
-                    f"{base_url}/api/insight/user/{user_id}/tags",
-                    json=request_body
-                )
-            else:
-                raise TaggingError(f"Unknown action: {action}")
+        # 使用共享客户端
+        client = await get_shared_client()
 
-            if response.status_code >= 400:
-                error_detail = response.text
-                logger.error(
-                    f"Failed to tag user {user_id}: "
-                    f"status={response.status_code}, error={error_detail}"
-                )
-                raise TaggingError(
-                    f"Insight service returned {response.status_code}: {error_detail}"
-                )
+        if action == "add":
+            # 添加标签
+            response = await client.put(
+                f"{base_url}/api/insight/user/{user_id}/tags",
+                json=request_body
+            )
+        elif action == "remove":
+            # 移除标签
+            response = await client.request(
+                "DELETE",
+                f"{base_url}/api/insight/user/{user_id}/tags",
+                json=request_body
+            )
+        elif action == "set":
+            # 设置标签（覆盖）
+            response = await client.post(
+                f"{base_url}/api/insight/user/{user_id}/tags",
+                json=request_body
+            )
+        else:
+            raise TaggingError(f"Unknown action: {action}")
 
-            result = response.json() if response.content else {}
-            logger.info(f"Successfully tagged user {user_id} with {tags}")
+        if response.status_code >= 400:
+            error_detail = response.text
+            logger.error(
+                f"Failed to tag user {user_id}: "
+                f"status={response.status_code}, error={error_detail}"
+            )
+            raise TaggingError(
+                f"Insight service returned {response.status_code}: {error_detail}"
+            )
 
-            return {
-                "status": "success",
-                "user_id": user_id,
-                "tags": tags,
-                "action": action,
-                "response": result
-            }
+        result = response.json() if response.content else {}
+        logger.info(f"Successfully tagged user {user_id} with {tags}")
+
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "tags": tags,
+            "action": action,
+            "response": result
+        }
 
     except httpx.TimeoutException:
         logger.error(f"Timeout while tagging user {user_id}")
@@ -137,20 +171,20 @@ async def get_user_tags(
     base_url = f"http://{insight_host}:{port}"
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                f"{base_url}/api/insight/user/{user_id}/tags"
+        client = await get_shared_client()
+        response = await client.get(
+            f"{base_url}/api/insight/user/{user_id}/tags"
+        )
+
+        if response.status_code == 404:
+            return {"user_id": user_id, "tags": {}}
+
+        if response.status_code >= 400:
+            raise TaggingError(
+                f"Failed to get user tags: status={response.status_code}"
             )
 
-            if response.status_code == 404:
-                return {"user_id": user_id, "tags": {}}
-
-            if response.status_code >= 400:
-                raise TaggingError(
-                    f"Failed to get user tags: status={response.status_code}"
-                )
-
-            return response.json()
+        return response.json()
 
     except httpx.TimeoutException:
         raise TaggingError("Insight service timeout")
@@ -174,40 +208,44 @@ async def batch_tag_users(
     Returns:
         批量操作结果
     """
+    import asyncio
+
     results = []
     port = insight_port or settings.insight_port
     base_url = f"http://{insight_host}:{port}"
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        for item in users_tags:
-            user_id = item.get("user_id")
-            tags = item.get("tags", [])
+    client = await get_shared_client()
 
-            if not user_id or not tags:
-                results.append({
-                    "user_id": user_id,
-                    "status": "error",
-                    "error": "Missing user_id or tags"
-                })
-                continue
+    async def tag_single_user(item: dict[str, Any]) -> dict[str, Any]:
+        user_id = item.get("user_id")
+        tags = item.get("tags", [])
 
-            try:
-                response = await client.put(
-                    f"{base_url}/api/insight/user/{user_id}/tags",
-                    json={"tags": tags, "source": "batch_rule"}
-                )
+        if not user_id or not tags:
+            return {
+                "user_id": user_id,
+                "status": "error",
+                "error": "Missing user_id or tags"
+            }
 
-                results.append({
-                    "user_id": user_id,
-                    "status": "success" if response.status_code < 400 else "error",
-                    "status_code": response.status_code
-                })
+        try:
+            response = await client.put(
+                f"{base_url}/api/insight/user/{user_id}/tags",
+                json={"tags": tags, "source": "batch_rule"}
+            )
 
-            except Exception as e:
-                results.append({
-                    "user_id": user_id,
-                    "status": "error",
-                    "error": str(e)
-                })
+            return {
+                "user_id": user_id,
+                "status": "success" if response.status_code < 400 else "error",
+                "status_code": response.status_code
+            }
 
-    return results
+        except Exception as e:
+            return {
+                "user_id": user_id,
+                "status": "error",
+                "error": str(e)
+            }
+
+    # 并发处理批量请求
+    results = await asyncio.gather(*[tag_single_user(item) for item in users_tags])
+    return list(results)

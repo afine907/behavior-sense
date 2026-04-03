@@ -5,6 +5,7 @@
 from datetime import datetime
 from typing import Any
 from sqlalchemy import select, update, insert, delete
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import Column, String, JSON, DateTime, Integer, Float
 from sqlalchemy.orm import declarative_base
@@ -105,7 +106,7 @@ class UserRepository:
         profile: UserProfile | dict[str, Any],
     ) -> UserProfile:
         """
-        更新用户画像
+        更新用户画像 (使用 PostgreSQL UPSERT 避免竞态条件)
 
         Args:
             user_id: 用户ID
@@ -126,28 +127,19 @@ class UserRepository:
         else:
             update_data = {**profile, "update_time": datetime.utcnow()}
 
-        # 先尝试更新
-        stmt = (
-            update(UserModel)
-            .where(UserModel.user_id == user_id)
-            .values(**update_data)
+        # 使用 PostgreSQL INSERT ... ON CONFLICT UPDATE (原子操作，避免竞态条件)
+        stmt = pg_insert(UserModel).values(
+            user_id=user_id,
+            **update_data,
+            create_time=datetime.utcnow(),
         )
-        result = await self._session.execute(stmt)
-
-        if result.rowcount == 0:
-            # 用户不存在，创建新用户
-            insert_data = {
-                "user_id": user_id,
-                **update_data,
-                "create_time": datetime.utcnow(),
-            }
-            stmt = insert(UserModel).values(**insert_data)
-            await self._session.execute(stmt)
-            logger.info("Created new user profile", user_id=user_id)
-        else:
-            logger.info("Updated user profile", user_id=user_id)
-
+        stmt = stmt.on_conflict_do_update(
+            index_elements=['user_id'],
+            set_=update_data,
+        )
+        await self._session.execute(stmt)
         await self._session.commit()
+        logger.info("Upserted user profile", user_id=user_id)
 
         # 返回更新后的画像
         return await self.get_user_profile(user_id)  # type: ignore
@@ -196,7 +188,7 @@ class UserRepository:
         stat: UserStat | dict[str, Any],
     ) -> UserStat:
         """
-        更新用户统计
+        更新用户统计 (使用 PostgreSQL UPSERT 避免竞态条件)
 
         Args:
             user_id: 用户ID
@@ -228,27 +220,18 @@ class UserRepository:
         else:
             update_data = {**stat, "update_time": datetime.utcnow()}
 
-        # 先尝试更新
-        stmt = (
-            update(UserStatModel)
-            .where(UserStatModel.user_id == user_id)
-            .values(**update_data)
+        # 使用 PostgreSQL INSERT ... ON CONFLICT UPDATE (原子操作，避免竞态条件)
+        stmt = pg_insert(UserStatModel).values(
+            user_id=user_id,
+            **update_data,
         )
-        result = await self._session.execute(stmt)
-
-        if result.rowcount == 0:
-            # 不存在，创建新记录
-            insert_data = {
-                "user_id": user_id,
-                **update_data,
-            }
-            stmt = insert(UserStatModel).values(**insert_data)
-            await self._session.execute(stmt)
-            logger.info("Created new user stat", user_id=user_id)
-        else:
-            logger.info("Updated user stat", user_id=user_id)
-
+        stmt = stmt.on_conflict_do_update(
+            index_elements=['user_id'],
+            set_=update_data,
+        )
+        await self._session.execute(stmt)
         await self._session.commit()
+        logger.info("Upserted user stat", user_id=user_id)
 
         return await self.get_user_stat(user_id)  # type: ignore
 
