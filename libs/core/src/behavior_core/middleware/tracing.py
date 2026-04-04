@@ -4,11 +4,12 @@
 为每个请求生成唯一的 TraceID，便于日志追踪。
 """
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 logger = structlog.get_logger()
 
@@ -22,10 +23,10 @@ class TraceIDMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app,
+        app: ASGIApp,
         header_name: str = "X-Trace-Id",
         generator: Callable[[], str] = lambda: str(uuid.uuid4()),
-    ):
+    ) -> None:
         """
         初始化 TraceID 中间件
 
@@ -38,7 +39,9 @@ class TraceIDMiddleware(BaseHTTPMiddleware):
         self.header_name = header_name
         self.generator = generator
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """
         处理请求
 

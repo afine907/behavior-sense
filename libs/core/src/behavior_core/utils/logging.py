@@ -3,7 +3,7 @@
 """
 import logging
 import sys
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -45,7 +45,7 @@ def setup_logging() -> None:
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     """获取日志器"""
-    return structlog.get_logger(name)
+    return cast(structlog.stdlib.BoundLogger, structlog.get_logger(name))
 
 
 class LogContext:

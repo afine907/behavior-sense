@@ -3,8 +3,9 @@
 
 提供密码哈希、用户认证等功能。
 """
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -30,7 +31,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         密码是否匹配
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return cast(bool, pwd_context.verify(plain_password, hashed_password))
 
 
 def get_password_hash(password: str) -> str:
@@ -43,7 +44,7 @@ def get_password_hash(password: str) -> str:
     Returns:
         哈希密码
     """
-    return pwd_context.hash(password)
+    return cast(str, pwd_context.hash(password))
 
 
 def authenticate_user(
@@ -67,7 +68,7 @@ def authenticate_user(
         return None
     if not verify_password(password, user.get("hashed_password", "")):
         return None
-    return user
+    return cast(dict[str, Any], user)
 
 
 async def get_current_user(
@@ -131,7 +132,9 @@ async def get_current_active_user(
     return current_user
 
 
-def require_roles(*required_roles: str):
+def require_roles(
+    *required_roles: str,
+) -> Callable[[TokenData], Awaitable[TokenData]]:
     """
     创建角色检查依赖
 

@@ -4,10 +4,14 @@ Prometheus 指标模块
 提供统一的 Prometheus 指标定义和收集功能。
 """
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from functools import wraps
+from typing import ParamSpec, TypeVar
 
 from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # 创建独立的注册表，避免全局污染
 METRICS_REGISTRY = CollectorRegistry()
@@ -90,7 +94,7 @@ SERVICE_INFO = Info(
 )
 
 
-def set_service_info(service_name: str, version: str = "1.0.0"):
+def set_service_info(service_name: str, version: str = "1.0.0") -> None:
     """
     设置服务信息
 
@@ -104,7 +108,7 @@ def set_service_info(service_name: str, version: str = "1.0.0"):
     })
 
 
-def track_request_duration(method: str, endpoint: str):
+def track_request_duration(method: str, endpoint: str) -> object:
     """
     跟踪请求延迟的上下文管理器
 
@@ -119,7 +123,7 @@ def track_request_duration(method: str, endpoint: str):
     return HTTP_REQUEST_DURATION_SECONDS.labels(method=method, endpoint=endpoint).time()
 
 
-def increment_request_counter(method: str, endpoint: str, status_code: int):
+def increment_request_counter(method: str, endpoint: str, status_code: int) -> None:
     """
     增加请求计数
 
@@ -135,7 +139,7 @@ def increment_request_counter(method: str, endpoint: str, status_code: int):
     ).inc()
 
 
-def track_user_event(event_type: str, source: str = "api"):
+def track_user_event(event_type: str, source: str = "api") -> None:
     """
     跟踪用户事件
 
@@ -146,7 +150,7 @@ def track_user_event(event_type: str, source: str = "api"):
     USER_EVENTS_TOTAL.labels(event_type=event_type, source=source).inc()
 
 
-def track_rule_match(rule_id: str, rule_name: str):
+def track_rule_match(rule_id: str, rule_name: str) -> None:
     """
     跟踪规则匹配
 
@@ -157,7 +161,7 @@ def track_rule_match(rule_id: str, rule_name: str):
     RULE_MATCHES_TOTAL.labels(rule_id=rule_id, rule_name=rule_name).inc()
 
 
-def track_audit_order(status: str, level: str):
+def track_audit_order(status: str, level: str) -> None:
     """
     跟踪审核工单
 
@@ -168,7 +172,7 @@ def track_audit_order(status: str, level: str):
     AUDIT_ORDERS_TOTAL.labels(status=status, level=level).inc()
 
 
-def set_pending_audit_orders(level: str, count: int):
+def set_pending_audit_orders(level: str, count: int) -> None:
     """
     设置待处理审核工单数
 
@@ -179,7 +183,7 @@ def set_pending_audit_orders(level: str, count: int):
     AUDIT_ORDERS_PENDING.labels(level=level).set(count)
 
 
-def track_tag_operation(operation: str, source: str = "api"):
+def track_tag_operation(operation: str, source: str = "api") -> None:
     """
     跟踪标签操作
 
@@ -201,7 +205,9 @@ def get_metrics() -> str:
     return generate_latest(METRICS_REGISTRY).decode("utf-8")
 
 
-def metrics_middleware(request_path: str) -> Callable:
+def metrics_middleware(
+    request_path: str,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     创建指标中间件装饰器
 
@@ -211,9 +217,9 @@ def metrics_middleware(request_path: str) -> Callable:
     Returns:
         装饰器函数
     """
-    def decorator(func: Callable):
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             start_time = time.time()
             status_code = 200
 

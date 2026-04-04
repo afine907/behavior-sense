@@ -71,7 +71,7 @@ class Settings(BaseSettings):
         mode="before"
     )
     @classmethod
-    def validate_password(cls, v):
+    def validate_password(cls, v: str | SecretStr) -> SecretStr:
         """验证密码不为空（生产环境）"""
         if isinstance(v, str):
             return SecretStr(v)

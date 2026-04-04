@@ -4,7 +4,7 @@ JWT Token 处理模块
 提供 JWT Token 的创建和解码功能。
 """
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -69,11 +69,11 @@ def create_access_token(
     if additional_claims:
         to_encode.update(additional_claims)
 
-    encoded_jwt = jwt.encode(
+    encoded_jwt = cast(str, jwt.encode(
         to_encode,
         settings.jwt_secret_key.get_secret_value(),
         algorithm=settings.jwt_algorithm,
-    )
+    ))
     return encoded_jwt
 
 

@@ -4,11 +4,13 @@ API 限流中间件
 基于 Redis 的滑动窗口限流算法。
 """
 import time
+from collections.abc import Awaitable, Callable
 
 import redis.asyncio as redis
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 from behavior_core.utils.logging import get_logger
 
@@ -24,12 +26,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app,
+        app: ASGIApp,
         redis_client: redis.Redis | None = None,
         requests_per_minute: int = 100,
         window_seconds: int = 60,
         key_prefix: str = "rate_limit:",
-    ):
+    ) -> None:
         """
         初始化限流中间件
 
@@ -63,7 +65,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return "unknown"
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """
         处理请求
 
@@ -93,12 +97,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
     async def _redis_rate_limit(
-        self, request: Request, call_next, key: str
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+        key: str,
     ) -> Response:
         """使用 Redis 进行限流"""
         current_time = time.time()
         window_start = current_time - self.window_seconds
 
+        assert self.redis_client is not None  # for mypy
         pipe = self.redis_client.pipeline()
         # 移除窗口外的记录
         pipe.zremrangebyscore(key, 0, window_start)
@@ -131,7 +139,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     async def _memory_rate_limit(
-        self, request: Request, call_next, key: str
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+        key: str,
     ) -> Response:
         """使用内存进行限流（备用方案）"""
         current_time = time.time()
