@@ -1,0 +1,108 @@
+# 项目类型检测规则
+
+version: "1.0"
+
+detection_rules:
+  frontend:
+    priority: 1
+    has_files:
+      - "package.json"
+      - "vite.config.*"
+      - "webpack.config.*"
+      - "tsconfig.json"
+    has_patterns:
+      - "**/*.html"
+      - "**/*.tsx"
+      - "**/*.jsx"
+      - "**/*.vue"
+      - "**/*.svelte"
+      - "**/*.css"
+    has_dirs:
+      - "src/components"
+      - "src/pages"
+      - "public"
+      - "static"
+    excludes:
+      - "api/"
+      - "server/"
+      - "backend/"
+    min_score: 3
+
+  backend:
+    priority: 2
+    has_files:
+      - "requirements.txt"
+      - "pyproject.toml"
+      - "setup.py"
+      - "go.mod"
+      - "pom.xml"
+      - "build.gradle"
+    has_patterns:
+      - "**/api/**/*.py"
+      - "**/routes/**/*.py"
+      - "**/controllers/**/*.py"
+      - "**/services/**/*.py"
+    has_dirs:
+      - "api"
+      - "controllers"
+      - "services"
+      - "models"
+      - "routes"
+    excludes:
+      - "public/"
+      - "components/"
+      - "views/"
+    min_score: 2
+
+  fullstack:
+    priority: 3
+    requires:
+      frontend_indicators:
+        - "package.json"
+        - "src/"
+        - "public/"
+      backend_indicators:
+        - "api/"
+        - "server/"
+        - "backend/"
+    has_dirs:
+      - "client"
+      - "server"
+      - "frontend"
+      - "backend"
+      - "web"
+      - "api"
+    common_patterns:
+      - "next.config.*"
+      - "nuxt.config.*"
+    min_score: 3
+
+detection_config:
+  weights:
+    has_files: 2.0
+    has_patterns: 1.0
+    has_dirs: 1.5
+    excludes: -2.0
+  max_depth: 3
+  timeout_seconds: 5
+
+type_labels:
+  frontend: "前端项目"
+  backend: "后端项目"
+  fullstack: "全栈项目"
+
+evaluation_mapping:
+  frontend:
+    checklist: "references/frontend.yaml"
+    mcp_servers: [playwright, filesystem]
+    estimated_time: "2-5分钟"
+
+  backend:
+    checklist: "references/backend.yaml"
+    mcp_servers: [postgres, filesystem]
+    estimated_time: "1-3分钟"
+
+  fullstack:
+    checklist: "references/fullstack.yaml"
+    mcp_servers: [playwright, postgres, filesystem]
+    estimated_time: "3-8分钟"

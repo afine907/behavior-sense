@@ -1,0 +1,109 @@
+# 全栈项目评估检查清单
+
+version: "1.0"
+
+# 继承前端和后端的检查项
+extends:
+  - frontend.yaml
+  - backend.yaml
+
+# 全栈特有的端到端检查
+checks:
+  e2e:
+    category: "端到端流程"
+    weight: 40
+    items:
+      - id: "user_login_flow"
+        name: "用户登录流程"
+        steps:
+          - "访问登录页"
+          - "输入凭据"
+          - "提交表单"
+          - "验证跳转"
+          - "检查数据库Session"
+        tools: [playwright, postgres-mcp]
+        severity: "P0"
+
+      - id: "data_submit_flow"
+        name: "数据提交流程"
+        steps:
+          - "打开表单页面"
+          - "填写表单数据"
+          - "提交表单"
+          - "验证API响应"
+          - "验证数据库记录"
+          - "验证前端显示"
+        tools: [playwright, postgres-mcp]
+        severity: "P0"
+
+      - id: "data_display_flow"
+        name: "数据显示流程"
+        steps:
+          - "准备测试数据（数据库）"
+          - "访问列表页面"
+          - "等待数据加载"
+          - "验证数据显示"
+        tools: [postgres-mcp, playwright]
+        severity: "P0"
+
+  consistency:
+    category: "数据一致性"
+    weight: 30
+    items:
+      - id: "frontend_backend_sync"
+        name: "前后端数据同步"
+        tools: [playwright, bash]
+        severity: "P0"
+
+      - id: "backend_db_sync"
+        name: "后端数据库同步"
+        tools: [bash, postgres-mcp]
+        severity: "P0"
+
+      - id: "cache_db_sync"
+        name: "缓存数据库同步"
+        tools: [bash, postgres-mcp]
+        severity: "P1"
+
+  user_scenarios:
+    category: "完整用户场景"
+    weight: 30
+    items:
+      - id: "new_user_journey"
+        name: "新用户旅程"
+        steps:
+          - "访问首页"
+          - "点击注册"
+          - "填写注册信息"
+          - "登录系统"
+          - "完成首次操作"
+        tool: playwright
+        severity: "P1"
+
+      - id: "search_filter_scenario"
+        name: "搜索过滤场景"
+        steps:
+          - "进入搜索页面"
+          - "输入搜索关键词"
+          - "验证搜索结果"
+          - "应用筛选条件"
+        tool: playwright
+        severity: "P1"
+
+scoring:
+  combined_weights:
+    frontend_checks: 20
+    backend_checks: 20
+    e2e_checks: 40
+    consistency_checks: 20
+
+  status_thresholds:
+    excellent: 90
+    good: 75
+    warning: 60
+    critical: 0
+
+  severity_penalty:
+    P0: 20
+    P1: 10
+    P2: 5

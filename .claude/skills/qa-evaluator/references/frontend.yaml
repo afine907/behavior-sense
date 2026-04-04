@@ -1,0 +1,94 @@
+# 前端项目评估检查清单
+
+version: "1.0"
+
+checks:
+  rendering:
+    category: "页面渲染"
+    weight: 30
+    items:
+      - id: "render_fcp"
+        name: "首次内容绘制 (FCP)"
+        threshold: "< 1.5s"
+        tool: playwright
+        severity: "P1"
+
+      - id: "render_lcp"
+        name: "最大内容绘制 (LCP)"
+        threshold: "< 2.5s"
+        tool: playwright
+        severity: "P1"
+
+      - id: "render_cls"
+        name: "累积布局偏移 (CLS)"
+        threshold: "< 0.1"
+        tool: playwright
+        severity: "P2"
+
+  interaction:
+    category: "UI交互"
+    weight: 30
+    items:
+      - id: "form_submit"
+        name: "表单提交响应"
+        tool: playwright
+        severity: "P0"
+
+      - id: "navigation"
+        name: "导航跳转"
+        tool: playwright
+        severity: "P0"
+
+      - id: "button_click"
+        name: "按钮点击反馈"
+        tool: playwright
+        severity: "P1"
+
+  responsive:
+    category: "响应式布局"
+    weight: 20
+    items:
+      - id: "mobile_layout"
+        name: "移动端布局 (375px)"
+        viewport: { width: 375, height: 667 }
+        tool: playwright
+        severity: "P1"
+
+      - id: "desktop_layout"
+        name: "桌面端布局 (1440px)"
+        viewport: { width: 1440, height: 900 }
+        tool: playwright
+        severity: "P1"
+
+  accessibility:
+    category: "无障碍访问"
+    weight: 20
+    items:
+      - id: "color_contrast"
+        name: "色彩对比度"
+        standard: "WCAG AA"
+        tool: playwright
+        severity: "P2"
+
+      - id: "keyboard_navigation"
+        name: "键盘导航"
+        tool: playwright
+        severity: "P1"
+
+scoring:
+  category_weights:
+    rendering: 30
+    interaction: 30
+    responsive: 20
+    accessibility: 20
+
+  status_thresholds:
+    excellent: 90
+    good: 75
+    warning: 60
+    critical: 0
+
+  severity_penalty:
+    P0: 20
+    P1: 10
+    P2: 5

@@ -1,0 +1,162 @@
+# 后端项目评估检查清单
+
+version: "1.0"
+
+checks:
+  api:
+    category: "API功能"
+    weight: 35
+    items:
+      - id: "health_endpoint"
+        name: "健康检查端点"
+        endpoint: "/health"
+        method: GET
+        expected_status: 200
+        tool: bash
+        severity: "P0"
+
+      - id: "api_response_format"
+        name: "API响应格式"
+        expected_content_type: "application/json"
+        tool: bash
+        severity: "P1"
+
+      - id: "error_handling"
+        name: "错误处理"
+        test_cases:
+          - name: "无效参数"
+            expected_status: [400, 422]
+          - name: "未授权访问"
+            expected_status: [401, 403]
+        tool: bash
+        severity: "P1"
+
+      - id: "crud_operations"
+        name: "CRUD操作"
+        test_cases:
+          - method: "POST"
+            expected_status: [200, 201]
+          - method: "GET"
+            expected_status: [200]
+          - method: "PUT"
+            expected_status: [200, 204]
+          - method: "DELETE"
+            expected_status: [200, 204]
+        tool: bash
+        severity: "P0"
+
+  data_flow:
+    category: "数据流"
+    weight: 25
+    items:
+      - id: "database_write"
+        name: "数据库写入"
+        tool: postgres-mcp
+        severity: "P0"
+
+      - id: "database_read"
+        name: "数据库读取"
+        tool: postgres-mcp
+        severity: "P0"
+
+      - id: "cache_sync"
+        name: "缓存同步"
+        tool: bash
+        severity: "P1"
+
+  performance:
+    category: "性能指标"
+    weight: 25
+    items:
+      - id: "api_latency"
+        name: "API响应延迟"
+        threshold:
+          p50: "< 100ms"
+          p99: "< 500ms"
+        tool: bash
+        severity: "P1"
+
+      - id: "db_query_time"
+        name: "数据库查询时间"
+        threshold: "< 100ms"
+        tool: postgres-mcp
+        severity: "P1"
+
+  security:
+    category: "安全检查"
+    weight: 15
+    items:
+      - id: "sql_injection"
+        name: "SQL注入防护"
+        tool: bash
+        severity: "P0"
+
+      - id: "authentication"
+        name: "认证机制"
+        tool: bash
+        severity: "P0"
+
+      - id: "sensitive_data_mask"
+        name: "敏感数据脱敏"
+        tool: bash
+        severity: "P1"
+
+# BehaviorSense项目API端点配置
+api_endpoints:
+  behavior_mock:
+    port: 8001
+    endpoints:
+      - path: "/health"
+        method: "GET"
+        expected: 200
+      - path: "/api/mock/generate"
+        method: "POST"
+        expected: 200
+
+  behavior_rules:
+    port: 8002
+    endpoints:
+      - path: "/health"
+        method: "GET"
+        expected: 200
+      - path: "/api/rules"
+        method: "GET"
+        expected: 200
+
+  behavior_insight:
+    port: 8003
+    endpoints:
+      - path: "/health"
+        method: "GET"
+        expected: 200
+      - path: "/api/insight/user/{id}/tags"
+        method: "GET"
+        expected: [200, 404]
+
+  behavior_audit:
+    port: 8004
+    endpoints:
+      - path: "/health"
+        method: "GET"
+        expected: 200
+      - path: "/api/audit/orders"
+        method: "GET"
+        expected: 200
+
+scoring:
+  category_weights:
+    api: 35
+    data_flow: 25
+    performance: 25
+    security: 15
+
+  status_thresholds:
+    excellent: 90
+    good: 75
+    warning: 60
+    critical: 0
+
+  severity_penalty:
+    P0: 20
+    P1: 10
+    P2: 5
