@@ -289,6 +289,7 @@ class SessionWindow(WindowFunction[T, R]):
 
         if is_new_session or key not in self._last_activity:
             # 开始新会话
+            is_new_session = True  # 标记为新会话
             self._session_start[key] = timestamp
             window = WindowResult[T](
                 window_start=timestamp,

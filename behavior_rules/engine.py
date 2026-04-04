@@ -222,21 +222,23 @@ class RuleEngine:
         Raises:
             ConditionEvalError: 遇到不允许的节点类型
         """
-        # 允许的字面量
+        # 允许的字面量 (Python 3.8+ 使用 ast.Constant)
         if isinstance(node, ast.Constant):
             return node.value
 
-        if isinstance(node, ast.Num):  # Python 3.7 兼容
-            return node.n
-
-        if isinstance(node, ast.Str):  # Python 3.7 兼容
-            return node.s
-
-        if isinstance(node, (ast.True_, ast.False_)):
-            return isinstance(node, ast.True_)
-
-        if isinstance(node, ast.None_):
-            return None
+        # Python 3.7 兼容 (已在 Python 3.12 中移除)
+        try:
+            if isinstance(node, ast.Num):
+                return node.n
+            if isinstance(node, ast.Str):
+                return node.s
+            if isinstance(node, (ast.True_, ast.False_)):
+                return isinstance(node, ast.True_)
+            if isinstance(node, ast.None_):
+                return None
+        except AttributeError:
+            # Python 3.12+ 中这些类型已移除，使用 ast.Constant 替代
+            pass
 
         # 允许变量名
         if isinstance(node, ast.Name):
@@ -394,7 +396,8 @@ class RuleEngine:
                     )
                     actions_executed.append({
                         "action": action.type.value,
-                        "error": f"No handler registered for action type: {action.type}"
+                        "error": f"No handler registered for action type: {action.type}",
+                        "success": False
                     })
                     continue
 

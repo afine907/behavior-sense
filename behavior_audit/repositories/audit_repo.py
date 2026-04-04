@@ -10,7 +10,7 @@ from uuid import uuid4
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlmodel import SQLModel, Field
-from sqlmodel.colocations import JSON
+from sqlalchemy import JSON
 
 from behavior_core.config.settings import get_settings
 from behavior_core.utils.logging import get_logger
