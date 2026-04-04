@@ -26,6 +26,7 @@ Mock → Pulsar → Faust(Stream) → Rules → Insight
 
 ## 技术栈
 - **语言**: Python 3.11+
+- **包管理**: uv (Astral)
 - **Web框架**: FastAPI
 - **数据验证**: Pydantic v2
 - **消息队列**: Apache Pulsar
@@ -35,26 +36,41 @@ Mock → Pulsar → Faust(Stream) → Rules → Insight
 - **分析存储**: ClickHouse
 - **日志**: structlog
 
-## 项目结构
+## 项目结构 (Monorepo)
 ```
 behavior-sense/
-├── behavior_core/          # 核心库 (数据模型、配置、工具)
-├── behavior_mock/          # 模拟器模块 (端口 8001)
-├── behavior_stream/        # 流处理模块 (Faust)
-├── behavior_rules/         # 规则引擎模块 (端口 8002)
-├── behavior_insight/       # 洞察服务模块 (端口 8003)
-├── behavior_audit/         # 审核服务模块 (端口 8004)
-├── wiki/                   # 知识库文档
-├── docker/                 # Docker 配置
-└── tests/                  # 测试文件
+├── pyproject.toml           # 根配置 + uv workspace
+├── uv.lock                   # 依赖锁定文件
+├── pnpm-workspace.yaml       # 前端 workspace 配置
+│
+├── libs/                     # Python 共享库
+│   └── core/                 # behavior-core
+│       └── src/behavior_core/
+│
+├── packages/                 # Python 微服务
+│   ├── audit/                # behavior-audit (端口 8004)
+│   ├── insight/              # behavior-insight (端口 8003)
+│   ├── mock/                 # behavior-mock (端口 8001)
+│   ├── rules/                # behavior-rules (端口 8002)
+│   └── stream/               # behavior-stream
+│
+├── apps/                     # 前端应用 (预留)
+│   └── web/                  # Next.js 应用
+│
+├── infrastructure/           # 基础设施配置
+│   └── docker/               # Dockerfile, docker-compose
+│
+├── tests/                    # 集成测试
+└── wiki/                     # 项目文档
 ```
 
 ## Why:
-- 这是用户行为分析的核心业务，需要实时处理用户事件流
-- 采用流处理架构保证低延迟 (< 1秒)
-- 规则引擎支持灵活的业务规则配置
+- Monorepo 结构便于管理多服务依赖和共享代码
+- uv 包管理器比 Poetry 快 10-100 倍，原生支持 workspace
+- src 布局避免导入冲突，符合 Python 最佳实践
 
 ## How to apply:
 - 开发新功能时参考 wiki/ 目录下的架构设计
 - 遵循 wiki/best-practices.md 的代码规范
 - 各模块独立开发，通过 Pulsar 消息队列通信
+- 使用 `uv sync` 安装依赖，`uv run` 执行命令

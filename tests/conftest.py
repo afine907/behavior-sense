@@ -1,9 +1,27 @@
 """
-pytest 配置文件
+pytest 配置文件 - Monorepo 结构支持
 """
+import sys
 import pytest
 import asyncio
+from pathlib import Path
 from typing import Generator
+
+# 添加 monorepo 源码路径到 sys.path
+ROOT_DIR = Path(__file__).parent.parent
+LIBS_CORE = ROOT_DIR / "libs" / "core" / "src"
+PACKAGES_DIR = ROOT_DIR / "packages"
+
+# 添加核心库
+if str(LIBS_CORE) not in sys.path:
+    sys.path.insert(0, str(LIBS_CORE))
+
+# 添加所有服务包
+for service in PACKAGES_DIR.iterdir():
+    if service.is_dir():
+        src_dir = service / "src"
+        if src_dir.exists() and str(src_dir) not in sys.path:
+            sys.path.insert(0, str(src_dir))
 
 
 @pytest.fixture(scope="session")

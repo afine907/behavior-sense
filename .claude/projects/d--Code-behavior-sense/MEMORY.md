@@ -2,32 +2,41 @@
 
 ## 项目记忆
 
-- [项目概览](memory/project_overview.md) — 核心功能、技术栈、项目结构
-- [开发进度](memory/project_progress.md) — 模块完成状态、待办事项、优先级
+- [项目概览](memory/project_overview.md) — 核心功能、技术栈、Monorepo 结构
+- [开发进度](memory/project_progress.md) — 模块完成状态、待办事项
+
+## 开发规范
+
+- [Commit 规范](memory/feedback_commit.md) — Git commit 消息必须使用英文
+- [技术栈偏好](memory/feedback_python.md) — Python 技术栈约束
 
 ## 快速参考
 
 ### 服务端口
 | 服务 | 端口 |
 |------|------|
-| behavior_mock | 8001 |
-| behavior_rules | 8002 |
-| behavior_insight | 8003 |
-| behavior_audit | 8004 |
+| packages/mock | 8001 |
+| packages/rules | 8002 |
+| packages/insight | 8003 |
+| packages/audit | 8004 |
 
 ### 核心命令
 ```bash
 # 安装依赖
-pip install -e ".[dev]"
+uv sync
+
+# 运行测试
+uv run pytest tests/
 
 # 启动基础设施
 docker-compose up -d
 
 # 启动服务
-uvicorn behavior_insight.main:app --port 8003
+uv run uvicorn behavior_insight.main:app --port 8003
 
-# 启动流处理
-python -m behavior_stream
+# 添加依赖
+uv add httpx                    # 添加到根项目
+uv add --package behavior-audit httpx  # 添加到指定包
 ```
 
 ### 关键文件

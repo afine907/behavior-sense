@@ -1,14 +1,13 @@
 [project]
 name = "behavior-sense"
 version = "1.0.0"
-description = "User Behavior Stream Analytics Engine"
+description = "User Behavior Stream Analytics Engine - Monorepo"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
-license = {text = "MIT"}
-authors = [
-    {name = "BehaviorSense Team"}
-]
+authors = [{ name = "BehaviorSense Team" }]
 
+# 所有依赖集中管理
 dependencies = [
     # Web 框架
     "fastapi>=0.109.0",
@@ -49,6 +48,7 @@ dependencies = [
     # 工具
     "tenacity>=8.2.0",
     "prometheus-client>=0.19.0",
+    "pyyaml>=6.0.0",
 
     # 安全
     "python-jose[cryptography]>=3.3.0",
@@ -62,7 +62,7 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.12.0",
-    "ruff>=0.1.0",
+    "ruff>=0.4.0",
     "mypy>=1.8.0",
     "pre-commit>=3.6.0",
 ]
@@ -71,8 +71,46 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# uv workspace 配置
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "ruff>=0.4.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "libs/core",
+    "packages/audit",
+    "packages/insight",
+    "packages/mock",
+    "packages/rules",
+    "packages/stream",
+]
+
+# 声明 workspace 内包的依赖源
+[tool.uv.sources]
+behavior-core = { workspace = true }
+behavior-audit = { workspace = true }
+behavior-insight = { workspace = true }
+behavior-mock = { workspace = true }
+behavior-rules = { workspace = true }
+behavior-stream = { workspace = true }
+
 [tool.hatch.build.targets.wheel]
-packages = ["behavior_core", "behavior_mock", "behavior_stream", "behavior_rules", "behavior_insight", "behavior_audit"]
+packages = [
+    "libs/core/src/behavior_core",
+    "packages/audit/src/behavior_audit",
+    "packages/insight/src/behavior_insight",
+    "packages/mock/src/behavior_mock",
+    "packages/rules/src/behavior_rules",
+    "packages/stream/src/behavior_stream",
+]
 
 [tool.ruff]
 line-length = 100
