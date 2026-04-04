@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 import redis.asyncio as redis
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
 from behavior_core.config.settings import get_settings
 from behavior_core.utils.logging import setup_logging, get_logger
@@ -153,7 +154,7 @@ async def health_check(request: Request) -> HealthResponse:
     db_status = "ok"
     try:
         session: AsyncSession = request.state.db_session
-        await session.execute("SELECT 1")
+        await session.execute(text("SELECT 1"))
     except Exception as e:
         logger.error("Database health check failed", error=str(e))
         db_status = "error"

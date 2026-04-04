@@ -8,8 +8,10 @@ services:
     ports:
       - "6650:6650"
       - "8080:8080"
+    command: ["bin/pulsar", "standalone"]
     environment:
       - PULSAR_PREFIX_clusterName=behavior-sense
+      - PULSAR_PREFIX_brokerDeleteInactiveTopicsEnabled=false
     networks:
       - behavior-net
 
