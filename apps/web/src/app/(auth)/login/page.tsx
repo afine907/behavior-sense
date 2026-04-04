@@ -150,9 +150,11 @@ export default function LoginPage() {
             )}
           </Button>
 
-          <p className="text-xs text-muted-foreground text-center">
-            测试账号: admin / admin123
-          </p>
+          {process.env.NODE_ENV === 'development' && (
+            <p className="text-xs text-muted-foreground text-center">
+              测试账号: admin / admin123
+            </p>
+          )}
         </CardFooter>
       </form>
     </Card>

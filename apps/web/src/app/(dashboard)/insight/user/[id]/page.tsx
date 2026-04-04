@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { UserProfile } from '@/components/insight';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { formatDate, formatTime } from '@/lib/utils/date';
+import { formatTime } from '@/lib/utils/date';
 import {
   ArrowLeft,
   Clock,
@@ -18,7 +17,6 @@ import {
   LogOut,
   MessageSquare,
 } from 'lucide-react';
-import { cn } from '@/lib/utils/cn';
 
 // Event type to icon mapping
 const eventIcons: Record<string, typeof Eye> = {

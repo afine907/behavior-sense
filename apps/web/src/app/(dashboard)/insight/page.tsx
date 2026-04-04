@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/use-toast';
 import { UserSearch, TagStatistics } from '@/components/insight';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,9 +17,19 @@ const popularTags = [
 
 export default function InsightPage() {
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleSearch = (userId: string) => {
-    router.push(`/insight/user/${encodeURIComponent(userId)}`);
+    const trimmedId = userId.trim();
+    if (!trimmedId) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid user ID',
+        variant: 'destructive',
+      });
+      return;
+    }
+    router.push(`/insight/user/${encodeURIComponent(trimmedId)}`);
   };
 
   return (

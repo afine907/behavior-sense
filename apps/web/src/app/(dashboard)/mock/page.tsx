@@ -1,7 +1,6 @@
 'use client';
 
-import * as React from 'react';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -20,7 +19,7 @@ import {
 import type { ScenarioType, ScenarioInfo, EventType } from '@/types/event';
 
 // Generate a random event ID
-const generateEventId = () => `evt_${Math.random().toString(36).substr(2, 9)}`;
+const generateEventId = () => `evt_${Math.random().toString(36).substring(2, 11)}`;
 
 // Generate a mock live event
 const generateMockLiveEvent = (scenario?: ScenarioType) => {
@@ -177,12 +176,16 @@ export default function MockPage() {
   // Cleanup intervals on unmount
   useEffect(() => {
     return () => {
-      runningScenarios.forEach(({ intervalId }) => clearInterval(intervalId));
+      // Use functional update to get current state
+      setRunningScenarios((current) => {
+        current.forEach(({ intervalId }) => clearInterval(intervalId));
+        return new Map(); // Clear the map
+      });
     };
   }, []);
 
   // Get all running scenarios (from local state + API)
-  const allRunningScenarios = React.useMemo(() => {
+  const allRunningScenarios = useMemo(() => {
     const localScenarios = Array.from(runningScenarios.values()).map(({ info }) => ({
       ...info,
       generatedCount: events.length,

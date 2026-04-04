@@ -36,7 +36,10 @@ export function ToastContextProvider({
   const [toasts, setToasts] = React.useState<ToastData[]>([]);
 
   const toast = React.useCallback((data: Omit<ToastData, 'id'>) => {
-    const id = Math.random().toString(36).substring(7);
+    const id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `toast-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     setToasts((prev) => [...prev, { ...data, id }]);
 
     // Auto dismiss after 5 seconds
@@ -49,8 +52,13 @@ export function ToastContextProvider({
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const value = React.useMemo(
+    () => ({ toasts, toast, dismiss }),
+    [toasts, toast, dismiss]
+  );
+
   return (
-    <ToastContext.Provider value={{ toasts, toast, dismiss }}>
+    <ToastContext.Provider value={value}>
       <ToastProvider>
         {children}
         {toasts.map((t) => (

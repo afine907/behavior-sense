@@ -1,10 +1,9 @@
 'use client';
 
-import * as React from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +46,6 @@ const sortOptions = [
 export default function AuditListPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Filter states
   const [page, setPage] = useState(1);
@@ -85,7 +83,7 @@ export default function AuditListPage() {
     setPage(1);
   };
 
-  const handleQuickApprove = async (orderId: string) => {
+  const handleQuickApprove = useCallback(async (orderId: string) => {
     try {
       await reviewMutation.mutateAsync({
         id: orderId,
@@ -103,9 +101,9 @@ export default function AuditListPage() {
         variant: 'destructive',
       });
     }
-  };
+  }, [reviewMutation, toast]);
 
-  const handleQuickReject = async (orderId: string) => {
+  const handleQuickReject = useCallback(async (orderId: string) => {
     try {
       await reviewMutation.mutateAsync({
         id: orderId,
@@ -123,7 +121,7 @@ export default function AuditListPage() {
         variant: 'destructive',
       });
     }
-  };
+  }, [reviewMutation, toast]);
 
   const orders = ordersData?.list || [];
   const totalItems = ordersData?.total || 0;

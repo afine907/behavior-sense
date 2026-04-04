@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 
+// ⚠️ DEVELOPMENT ONLY: Mock authentication
+// In production, replace with real JWT authentication using:
+// - jose or jsonwebtoken library
+// - Backend auth service at libs/core/src/behavior_core/security/jwt.py
+
 interface LoginRequest {
   username: string;
   password: string;

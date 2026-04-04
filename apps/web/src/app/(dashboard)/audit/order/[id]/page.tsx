@@ -1,7 +1,6 @@
 'use client';
 
-import * as React from 'react';
-import { use } from 'react';
+import { use, useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,9 +22,10 @@ export default function AuditOrderDetailPage({ params }: PageProps) {
   // Queries
   const { data: orderData, isLoading, error, refetch } = useAuditOrder(id);
   const reviewMutation = useReviewAuditOrder();
+  const [reviewSuccess, setReviewSuccess] = useState(false);
 
   // Mock events for demonstration (in real app, these would come from the API)
-  const events = React.useMemo(() => {
+  const events = useMemo(() => {
     if (!orderData?.events) {
       // Generate mock events based on triggerData
       const triggerData = orderData?.triggerData || {};
@@ -73,6 +73,16 @@ export default function AuditOrderDetailPage({ params }: PageProps) {
     return orderData.events;
   }, [orderData]);
 
+  // Handle navigation after successful review
+  useEffect(() => {
+    if (reviewSuccess) {
+      const timer = setTimeout(() => {
+        router.push('/audit');
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [reviewSuccess, router]);
+
   // Handlers
   const handleReview = async (data: { status: 'APPROVED' | 'REJECTED'; reviewerNote?: string }) => {
     try {
@@ -85,10 +95,7 @@ export default function AuditOrderDetailPage({ params }: PageProps) {
         description: `Audit order has been ${data.status.toLowerCase()}`,
         variant: data.status === 'APPROVED' ? 'success' : 'destructive',
       });
-      // Navigate back to the list after successful review
-      setTimeout(() => {
-        router.push('/audit');
-      }, 1500);
+      setReviewSuccess(true);
     } catch {
       toast({
         title: 'Error',
