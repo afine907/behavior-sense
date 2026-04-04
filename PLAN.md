@@ -1,29 +1,75 @@
-# BehaviorSense 编码计划
+# BehaviorSense Development Plan
 
-## 项目概览
+## Project Overview
 
-基于 Wiki 知识库，使用多 Agent 并行开发 BehaviorSense 项目。
+Multi-agent parallel development of BehaviorSense - a real-time user behavior stream analytics engine.
 
-## 任务依赖图
+## Monorepo Structure
+
+```
+behavior-sense/
+├── pyproject.toml           # Root config + uv workspace
+├── uv.lock                   # Lock file
+├── pnpm-workspace.yaml       # Frontend workspace (reserved)
+│
+├── libs/                     # Shared libraries
+│   └── core/                 # behavior-core
+│       ├── pyproject.toml
+│       └── src/behavior_core/
+│           ├── config/
+│           ├── models/
+│           ├── security/
+│           ├── middleware/
+│           ├── metrics.py
+│           └── utils/
+│
+├── packages/                 # Microservices
+│   ├── audit/                # behavior-audit (:8004)
+│   │   ├── pyproject.toml
+│   │   └── src/behavior_audit/
+│   ├── insight/              # behavior-insight (:8003)
+│   ├── mock/                 # behavior-mock (:8001)
+│   ├── rules/                # behavior-rules (:8002)
+│   └── stream/               # behavior-stream (Faust)
+│
+├── apps/                     # Frontend applications
+│   └── web/                  # Next.js (reserved)
+│
+├── infrastructure/           # Infrastructure configs
+│   └── docker/
+│
+└── tests/                    # Test suites
+    ├── test_core/
+    ├── test_audit/
+    ├── test_insight/
+    ├── test_mock/
+    ├── test_rules/
+    └── test_stream/
+```
+
+---
+
+## Task Dependency Graph
 
 ```
                     ┌─────────────┐
                     │ Phase 0     │
-                    │ 项目初始化   │
+                    │ Project     │
+                    │ Init        │
                     └──────┬──────┘
                            │
                     ┌──────▼──────┐
                     │ Phase 1     │
-                    │ behavior_core│
-                    │ (核心库)     │
+                    │ libs/core   │
+                    │ (Shared Lib)│
                     └──────┬──────┘
                            │
           ┌────────────────┼────────────────┐
           │                │                │
    ┌──────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐
    │ Phase 2A    │  │ Phase 2B    │  │ Phase 2C    │
-   │ behavior    │  │ behavior    │  │ behavior    │
-   │ _mock       │  │ _stream     │  │ _rules      │
+   │ packages/   │  │ packages/   │  │ packages/   │
+   │ mock        │  │ stream      │  │ rules       │
    └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
           │                │                │
           └────────────────┼────────────────┘
@@ -32,326 +78,213 @@
           │                │                │
    ┌──────▼──────┐  ┌──────▼──────┐        │
    │ Phase 3A    │  │ Phase 3B    │        │
-   │ behavior    │  │ behavior    │        │
-   │ _insight    │  │ _audit      │        │
+   │ packages/   │  │ packages/   │        │
+   │ insight     │  │ audit       │        │
    └──────┬──────┘  └──────┬──────┘        │
           │                │                │
           └────────────────┼────────────────┘
                            │
                     ┌──────▼──────┐
                     │ Phase 4     │
-                    │ 集成测试     │
-                    │ Docker部署   │
+                    │ Integration │
+                    │ & Deploy    │
                     └─────────────┘
 ```
 
 ---
 
-## Phase 0: 项目初始化 (优先级: P0)
+## Phase 0: Project Initialization (P0)
 
-### 任务清单
+### Tasks
 
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 0.1 | 创建项目目录结构 | ⬜ |
-| 0.2 | 创建 pyproject.toml | ⬜ |
-| 0.3 | 创建 .env.example | ⬜ |
-| 0.4 | 创建 docker-compose.yml | ⬜ |
-| 0.5 | 创建 README.md | ⬜ |
+| Task | Description | Status |
+|------|-------------|--------|
+| 0.1 | Create monorepo directory structure | ✅ Done |
+| 0.2 | Create root pyproject.toml with uv workspace | ✅ Done |
+| 0.3 | Create .env.example | ✅ Done |
+| 0.4 | Create docker-compose.yml | ✅ Done |
+| 0.5 | Create README.md | ✅ Done |
+| 0.6 | Create pnpm-workspace.yaml | ✅ Done |
 
-### 目录结构
+---
+
+## Phase 1: libs/core - Shared Library (P0)
+
+### Dependencies
+- None (foundation for all modules)
+
+### Tasks
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 1.1 | Create data models (models/event.py, user.py) | ✅ Done |
+| 1.2 | Create config management (config/settings.py) | ✅ Done |
+| 1.3 | Create logging utils (utils/logging.py) | ✅ Done |
+| 1.4 | Create datetime utils (utils/datetime.py) | ✅ Done |
+| 1.5 | Create security module (security/auth.py, jwt.py) | ✅ Done |
+| 1.6 | Create middleware (middleware/rate_limit.py, tracing.py) | ✅ Done |
+| 1.7 | Create metrics module (metrics.py) | ✅ Done |
+| 1.8 | Write unit tests | ✅ Done |
+
+### Output Structure
 
 ```
-behavior-sense/
+libs/core/
 ├── pyproject.toml
-├── README.md
-├── .env.example
-├── docker-compose.yml
-├── behavior_core/
-├── behavior_mock/
-├── behavior_stream/
-├── behavior_rules/
-├── behavior_insight/
-├── behavior_audit/
-├── tests/
-└── docker/
-```
-
----
-
-## Phase 1: behavior_core 核心库 (优先级: P0)
-
-### 依赖关系
-- 无依赖，是所有模块的基础
-
-### 任务清单
-
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 1.1 | 创建数据模型 (models/event.py, user.py) | ⬜ |
-| 1.2 | 创建配置管理 (config/settings.py) | ⬜ |
-| 1.3 | 创建日志工具 (utils/logging.py) | ⬜ |
-| 1.4 | 创建时间工具 (utils/datetime.py) | ⬜ |
-| 1.5 | 编写单元测试 | ⬜ |
-
-### 输出文件
-
-```
-behavior_core/
-├── __init__.py
-├── models/
-│   ├── __init__.py
-│   ├── event.py
-│   └── user.py
-├── config/
-│   ├── __init__.py
-│   └── settings.py
-└── utils/
+└── src/behavior_core/
     ├── __init__.py
-    ├── logging.py
-    └── datetime.py
+    ├── config/
+    │   ├── __init__.py
+    │   └── settings.py
+    ├── models/
+    │   ├── __init__.py
+    │   ├── event.py
+    │   └── user.py
+    ├── security/
+    │   ├── __init__.py
+    │   ├── auth.py
+    │   └── jwt.py
+    ├── middleware/
+    │   ├── __init__.py
+    │   ├── rate_limit.py
+    │   └── tracing.py
+    ├── metrics.py
+    └── utils/
+        ├── __init__.py
+        ├── logging.py
+        └── datetime.py
 ```
 
 ---
 
-## Phase 2A: behavior_mock 模拟器 (优先级: P1)
+## Phase 2A: packages/mock - Event Generator (P1)
 
-### 依赖关系
-- 依赖 behavior_core
+### Dependencies
+- libs/core
 
-### 任务清单
+### Tasks
 
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 2A.1 | 创建行为生成器 (generator.py) | ⬜ |
-| 2A.2 | 创建 Pulsar 生产者 (producer.py) | ⬜ |
-| 2A.3 | 创建场景配置 (scenarios.py) | ⬜ |
-| 2A.4 | 创建 FastAPI 入口 (main.py) | ⬜ |
-| 2A.5 | 编写单元测试 | ⬜ |
+| Task | Description | Status |
+|------|-------------|--------|
+| 2A.1 | Create behavior generator (generator.py) | ✅ Done |
+| 2A.2 | Create Pulsar producer (producer.py) | ✅ Done |
+| 2A.3 | Create scenario configs (scenarios.py) | ✅ Done |
+| 2A.4 | Create FastAPI entry (main.py) | ✅ Done |
+| 2A.5 | Write unit tests | ✅ Done |
 
-### 输出文件
+---
 
-```
-behavior_mock/
-├── __init__.py
-├── main.py
-├── generator.py
-├── producer.py
-└── scenarios.py
+## Phase 2B: packages/stream - Stream Processing (P1)
+
+### Dependencies
+- libs/core
+
+### Tasks
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 2B.1 | Create Faust app (app.py) | ✅ Done |
+| 2B.2 | Create aggregation job (jobs/aggregation.py) | ✅ Done |
+| 2B.3 | Create pattern detection (jobs/detection.py) | ✅ Done |
+| 2B.4 | Create window operators (operators/window.py) | ✅ Done |
+| 2B.5 | Create entry point (main.py) | ✅ Done |
+| 2B.6 | Write unit tests | ✅ Done |
+
+---
+
+## Phase 2C: packages/rules - Rule Engine (P1)
+
+### Dependencies
+- libs/core
+
+### Tasks
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 2C.1 | Create rule models (models.py) | ✅ Done |
+| 2C.2 | Create rule engine with AST parsing (engine.py) | ✅ Done |
+| 2C.3 | Create rule loader (loader.py) | ✅ Done |
+| 2C.4 | Create action handlers (actions/tagging.py, audit.py) | ✅ Done |
+| 2C.5 | Create FastAPI entry (main.py) | ✅ Done |
+| 2C.6 | Write unit tests | ✅ Done |
+
+---
+
+## Phase 3A: packages/insight - User Insight Service (P2)
+
+### Dependencies
+- libs/core
+- packages/rules (action handling)
+
+### Tasks
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 3A.1 | Create tag service (services/tag_service.py) | ✅ Done |
+| 3A.2 | Create user repository (repositories/user_repo.py) | ✅ Done |
+| 3A.3 | Create tag API (routers/tags.py) | ✅ Done |
+| 3A.4 | Create profile API (routers/profile.py) | ✅ Done |
+| 3A.5 | Create FastAPI entry (main.py) | ✅ Done |
+| 3A.6 | Write unit tests | ✅ Done |
+
+---
+
+## Phase 3B: packages/audit - Audit Service (P2)
+
+### Dependencies
+- libs/core
+- packages/rules (trigger audit)
+
+### Tasks
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 3B.1 | Create audit service (services/audit_service.py) | ✅ Done |
+| 3B.2 | Create audit repository (repositories/audit_repo.py) | ✅ Done |
+| 3B.3 | Create audit API (routers/audit.py) | ✅ Done |
+| 3B.4 | Create FastAPI entry (main.py) | ✅ Done |
+| 3B.5 | Write unit tests | ✅ Done |
+
+---
+
+## Phase 4: Integration & Deployment (P3)
+
+### Tasks
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 4.1 | Create multi-service Dockerfile | ✅ Done |
+| 4.2 | Update docker-compose.yml | ✅ Done |
+| 4.3 | Create GitHub Actions CI | ✅ Done |
+| 4.4 | Write integration tests | ✅ Done |
+| 4.5 | Create documentation | ✅ Done |
+
+---
+
+## Development Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Run tests
+uv run pytest tests/
+
+# Run specific service
+uv run uvicorn behavior_insight.main:app --port 8003
+
+# Run stream processor
+uv run python -m behavior_stream
+
+# Build Docker image
+docker build -f infrastructure/docker/Dockerfile --build-arg SERVICE=insight -t behaviorsense/insight:latest .
 ```
 
 ---
 
-## Phase 2B: behavior_stream 流处理 (优先级: P1)
+## Project Status
 
-### 依赖关系
-- 依赖 behavior_core
-
-### 任务清单
-
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 2B.1 | 创建 Faust 应用 (app.py) | ⬜ |
-| 2B.2 | 创建聚合任务 (jobs/aggregation.py) | ⬜ |
-| 2B.3 | 创建模式检测 (jobs/detection.py) | ⬜ |
-| 2B.4 | 创建窗口函数 (operators/window.py) | ⬜ |
-| 2B.5 | 创建入口 (main.py) | ⬜ |
-| 2B.6 | 编写单元测试 | ⬜ |
-
-### 输出文件
-
-```
-behavior_stream/
-├── __init__.py
-├── main.py
-├── app.py
-├── jobs/
-│   ├── __init__.py
-│   ├── aggregation.py
-│   └── detection.py
-└── operators/
-    ├── __init__.py
-    └── window.py
-```
-
----
-
-## Phase 2C: behavior_rules 规则引擎 (优先级: P1)
-
-### 依赖关系
-- 依赖 behavior_core
-
-### 任务清单
-
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 2C.1 | 创建规则模型 (models.py) | ⬜ |
-| 2C.2 | 创建规则引擎 (engine.py) | ⬜ |
-| 2C.3 | 创建规则加载器 (loader.py) | ⬜ |
-| 2C.4 | 创建动作处理器 (actions/tagging.py, audit.py) | ⬜ |
-| 2C.5 | 创建 FastAPI 入口 (main.py) | ⬜ |
-| 2C.6 | 编写单元测试 | ⬜ |
-
-### 输出文件
-
-```
-behavior_rules/
-├── __init__.py
-├── main.py
-├── models.py
-├── engine.py
-├── loader.py
-└── actions/
-    ├── __init__.py
-    ├── tagging.py
-    └── audit.py
-```
-
----
-
-## Phase 3A: behavior_insight 洞察服务 (优先级: P2)
-
-### 依赖关系
-- 依赖 behavior_core
-- 依赖 behavior_rules (动作处理)
-
-### 任务清单
-
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 3A.1 | 创建标签服务 (services/tag_service.py) | ⬜ |
-| 3A.2 | 创建用户仓库 (repositories/user_repo.py) | ⬜ |
-| 3A.3 | 创建标签 API (routers/tags.py) | ⬜ |
-| 3A.4 | 创建画像 API (routers/profile.py) | ⬜ |
-| 3A.5 | 创建 FastAPI 入口 (main.py) | ⬜ |
-| 3A.6 | 编写单元测试 | ⬜ |
-
-### 输出文件
-
-```
-behavior_insight/
-├── __init__.py
-├── main.py
-├── routers/
-│   ├── __init__.py
-│   ├── tags.py
-│   └── profile.py
-├── services/
-│   ├── __init__.py
-│   └── tag_service.py
-└── repositories/
-    ├── __init__.py
-    └── user_repo.py
-```
-
----
-
-## Phase 3B: behavior_audit 审核服务 (优先级: P2)
-
-### 依赖关系
-- 依赖 behavior_core
-- 依赖 behavior_rules (触发审核)
-
-### 任务清单
-
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 3B.1 | 创建审核服务 (services/audit_service.py) | ⬜ |
-| 3B.2 | 创建审核仓库 (repositories/audit_repo.py) | ⬜ |
-| 3B.3 | 创建审核 API (routers/audit.py) | ⬜ |
-| 3B.4 | 创建 FastAPI 入口 (main.py) | ⬜ |
-| 3B.5 | 编写单元测试 | ⬜ |
-
-### 输出文件
-
-```
-behavior_audit/
-├── __init__.py
-├── main.py
-├── routers/
-│   ├── __init__.py
-│   └── audit.py
-├── services/
-│   ├── __init__.py
-│   └── audit_service.py
-└── repositories/
-    ├── __init__.py
-    └── audit_repo.py
-```
-
----
-
-## Phase 4: 集成测试与部署 (优先级: P3)
-
-### 任务清单
-
-| 任务 | 描述 | 状态 |
-|------|------|------|
-| 4.1 | 创建 Dockerfile | ⬜ |
-| 4.2 | 完善 docker-compose.yml | ⬜ |
-| 4.3 | 编写集成测试 | ⬜ |
-| 4.4 | 编写端到端测试 | ⬜ |
-| 4.5 | 创建 GitHub Actions CI | ⬜ |
-
----
-
-## Agent 调度策略
-
-### 并行执行规则
-
-```
-Phase 0 (串行) → 完成后
-    ↓
-Phase 1 (串行) → 完成后
-    ↓
-Phase 2A, 2B, 2C (并行) → 全部完成后
-    ↓
-Phase 3A, 3B (并行) → 全部完成后
-    ↓
-Phase 4 (串行)
-```
-
-### Agent 分配
-
-| Agent | 负责任务 |
-|-------|----------|
-| Agent-Init | Phase 0, Phase 1 (项目初始化+核心库) |
-| Agent-Mock | Phase 2A (模拟器) |
-| Agent-Stream | Phase 2B (流处理) |
-| Agent-Rules | Phase 2C (规则引擎) |
-| Agent-Insight | Phase 3A (洞察服务) |
-| Agent-Audit | Phase 3B (审核服务) |
-| Agent-Deploy | Phase 4 (部署集成) |
-
----
-
-## 预计时间
-
-| 阶段 | 预计时间 | 并行度 |
-|------|----------|--------|
-| Phase 0 | 10 分钟 | 1 |
-| Phase 1 | 20 分钟 | 1 |
-| Phase 2 | 30 分钟 | 3 (并行) |
-| Phase 3 | 20 分钟 | 2 (并行) |
-| Phase 4 | 15 分钟 | 1 |
-| **总计** | **~60 分钟** | - |
-
----
-
-## 执行命令
-
-开始执行编码计划，使用以下命令：
-
-```
-请按照 PLAN.md 开始执行编码任务
-```
-
-或者分阶段执行：
-
-```
-请执行 Phase 0 项目初始化
-请执行 Phase 1 behavior_core
-请并行执行 Phase 2A, 2B, 2C
-请并行执行 Phase 3A, 3B
-请执行 Phase 4 集成部署
-```
+All phases completed. The project is ready for:
+- Feature development
+- Production deployment
+- Frontend integration (apps/web)

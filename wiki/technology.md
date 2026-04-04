@@ -114,7 +114,7 @@ behavior-sense/
 
 ```bash
 # Clone repository
-git clone https://github.com/behaviorsense/behavior-sense.git
+git clone https://github.com/afine907/behavior-sense.git
 cd behavior-sense
 
 # Install dependencies

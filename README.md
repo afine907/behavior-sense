@@ -1,6 +1,6 @@
 # BehaviorSense
 
-[![CI](https://github.com/behaviorsense/behavior-sense/actions/workflows/ci.yml/badge.svg)](https://github.com/behaviorsense/behavior-sense/actions/workflows/ci.yml)
+[![CI](https://github.com/afine907/behavior-sense/actions/workflows/ci.yml/badge.svg)](https://github.com/afine907/behavior-sense/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-orange.svg)](https://docs.astral.sh/ruff/)
@@ -101,7 +101,7 @@ behavior-sense/
 
 ```bash
 # Clone the repository
-git clone https://github.com/behaviorsense/behavior-sense.git
+git clone https://github.com/afine907/behavior-sense.git
 cd behavior-sense
 
 # Install dependencies
