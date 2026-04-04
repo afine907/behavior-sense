@@ -6,14 +6,20 @@ type: project
 
 # 项目开发进度
 
-## 总体状态: 🟢 核心功能完成 + Monorepo 重构完成
+## 总体状态: 🟢 核心功能完成 + Monorepo 重构完成 + CI修复完成
 
 **最后更新**: 2026-04-04
-**重大变更**: Monorepo 重构 + uv 包管理迁移
+**重大变更**: CI lint/test/mypy 全部通过，Docker构建改用GitHub Registry
 
 ---
 
 ## 2026-04-04 更新
+
+### CI 修复
+- [x] 修复 ruff lint 错误 (import排序、行长度、未使用变量)
+- [x] 修复 mypy 类型错误 (添加类型注解、配置宽松模式)
+- [x] 修复测试错误 (EventType枚举检查、随机种子隔离)
+- [x] Docker构建改用 GitHub Container Registry (ghcr.io)
 
 ### Monorepo 重构
 - [x] 迁移到标准 monorepo 目录结构 (`libs/`, `packages/`, `apps/`, `infrastructure/`)
