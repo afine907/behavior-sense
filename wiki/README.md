@@ -1,83 +1,113 @@
 # BehaviorSense Wiki
 
-欢迎来到 BehaviorSense 项目知识库。
+Welcome to the BehaviorSense project documentation.
 
-## 目录
+## Table of Contents
 
-- [架构设计](architecture.md) - 整体架构与设计原则
-- [模块设计](modules.md) - 五大核心模块详细设计
-- [技术选型](technology.md) - 技术栈选择与版本建议
-- [API 设计](api.md) - 对外接口规范
-- [部署方案](deployment.md) - 环境搭建与部署
+- [Architecture Design](architecture.md) - System architecture and design principles
+- [Module Design](modules.md) - Detailed design of all modules
+- [Technology Stack](technology.md) - Tech choices and version recommendations
+- [API Design](api.md) - RESTful API specifications
+- [Deployment Guide](deployment.md) - Environment setup and deployment
+- [Best Practices](best-practices.md) - Coding standards and patterns
 
-## 项目概述
+---
+
+## Project Overview
 
 **BehaviorSense** - User Behavior Stream Analytics Engine
 
-用户行为流实时分析引擎，核心流程：
+A real-time user behavior stream processing and analysis platform with sub-second latency.
+
+### Data Flow
 
 ```
-Mock → Pulsar → PyFlink/Faust → Rules → Insight
-       ↓
-    Audit (审核服务)
+Mock → Pulsar → Faust(Stream) → Rules → Insight
+                                     ↓
+                                  Audit (Manual Review)
 ```
 
-## 技术栈
+---
 
-| 组件 | 技术选型 |
-|------|----------|
-| 语言 | Python 3.11+ |
-| Web 框架 | FastAPI |
-| 流处理 | PyFlink / Faust |
-| 消息队列 | Apache Pulsar |
-| 数据库 | PostgreSQL / MySQL |
-| 缓存 | Redis |
-| 分析存储 | ClickHouse |
+## Tech Stack
 
-## 核心功能
+| Component | Technology |
+|-----------|------------|
+| Language | Python 3.11+ |
+| Package Manager | uv |
+| Web Framework | FastAPI |
+| Stream Processing | Faust |
+| Message Queue | Apache Pulsar |
+| Database | PostgreSQL |
+| Cache | Redis |
+| Analytics | ClickHouse |
 
-1. **Mock** - 模拟生成用户行为日志
-2. **Pulsar** - 数据接入与消息队列
-3. **Stream** - 实时流处理计算 (PyFlink/Faust)
-4. **Rules** - 规则引擎（规则匹配与触发）
-5. **Insight** - 分析洞察（标签生成与可视化）
+---
 
-## 项目结构
+## Project Structure
 
 ```
 behavior-sense/
-├── behavior_core/          # 核心库
-├── behavior_mock/          # 模拟器模块
-├── behavior_stream/        # 流处理模块
-├── behavior_rules/         # 规则引擎模块
-├── behavior_insight/       # 洞察服务模块
-├── behavior_audit/         # 审核服务模块
-├── tests/                  # 测试
-└── docker/                 # Docker 配置
+├── libs/                     # Shared libraries
+│   └── core/                 # behavior-core
+│       └── src/behavior_core/
+│
+├── packages/                 # Microservices
+│   ├── audit/                # behavior-audit (:8004)
+│   ├── insight/              # behavior-insight (:8003)
+│   ├── mock/                 # behavior-mock (:8001)
+│   ├── rules/                # behavior-rules (:8002)
+│   └── stream/               # behavior-stream (Faust)
+│
+├── apps/                     # Frontend apps (reserved)
+│   └── web/                  # Next.js
+│
+├── infrastructure/           # Infrastructure configs
+│   └── docker/
+│
+├── tests/                    # Test suites
+└── wiki/                     # Documentation
 ```
 
-## 快速开始
+---
+
+## Quick Start
 
 ```bash
-# 安装依赖
-pip install -e ".[dev]"
+# Install dependencies
+uv sync
 
-# 启动开发环境
+# Start infrastructure
 docker-compose up -d
 
-# 运行 Mock 服务
-python -m behavior_mock
+# Run mock service
+uv run uvicorn behavior_mock.main:app --port 8001
 
-# 运行流处理
-python -m behavior_stream
+# Run stream processor
+uv run python -m behavior_stream
 
-# 运行 API 服务
-uvicorn behavior_insight.main:app --reload
+# Run insight API
+uv run uvicorn behavior_insight.main:app --port 8003
+
+# Run tests
+uv run pytest tests/
 ```
 
-## 相关资源
+---
 
-- [FastAPI 文档](https://fastapi.tiangolo.com/)
-- [Apache Flink](https://flink.apache.org/)
+## Core Features
+
+1. **Mock** - Generate simulated user behavior events
+2. **Stream** - Real-time event processing with Faust
+3. **Rules** - Flexible rule engine with AST parsing
+4. **Insight** - User profiling and tag management
+5. **Audit** - Manual review workflow
+
+---
+
+## Resources
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Apache Pulsar](https://pulsar.apache.org/)
-- [Faust](https://faust-streaming.github.io/faust/)
+- [Faust Stream Processing](https://faust-streaming.github.io/faust/)
+- [uv Package Manager](https://docs.astral.sh/uv/)

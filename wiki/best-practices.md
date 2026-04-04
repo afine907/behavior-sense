@@ -1,4 +1,74 @@
-# Python 后端框架最佳实践
+# Python Backend Best Practices
+
+> This document covers best practices for the BehaviorSense project using FastAPI, Pydantic, SQLAlchemy, Faust, and related technologies.
+
+---
+
+## Project Structure (Monorepo)
+
+```
+behavior-sense/
+├── libs/core/                   # Shared library
+│   └── src/behavior_core/
+│       ├── config/              # Settings
+│       ├── models/              # Pydantic models
+│       ├── security/            # Auth, JWT
+│       ├── middleware/          # Rate limit, tracing
+│       └── utils/               # Logging, datetime
+│
+├── packages/                    # Microservices
+│   ├── audit/src/behavior_audit/
+│   ├── insight/src/behavior_insight/
+│   ├── mock/src/behavior_mock/
+│   ├── rules/src/behavior_rules/
+│   └── stream/src/behavior_stream/
+│
+└── tests/                       # Test suites
+```
+
+---
+
+## Package Management with uv
+
+### Installation
+
+```bash
+# Install all dependencies
+uv sync
+
+# Add dependency
+uv add httpx
+
+# Add to specific package
+uv add --package behavior-audit httpx
+
+# Add dev dependency
+uv add --group dev black
+
+# Run commands
+uv run pytest
+uv run ruff check libs/ packages/
+```
+
+### Workspace Configuration
+
+```toml
+# pyproject.toml
+[tool.uv.workspace]
+members = [
+    "libs/core",
+    "packages/audit",
+    "packages/insight",
+    "packages/mock",
+    "packages/rules",
+    "packages/stream",
+]
+
+[tool.uv.sources]
+behavior-core = { workspace = true }
+```
+
+---
 
 ## FastAPI 最佳实践
 

@@ -1,160 +1,200 @@
-# 架构设计
+# Architecture Design
 
-## 整体架构
+## Overview
+
+BehaviorSense adopts a **monorepo** architecture with clear separation of concerns between shared libraries, microservices, and frontend applications.
+
+## Directory Structure
+
+```
+behavior-sense/
+├── libs/                     # Shared libraries (Python)
+│   └── core/                 # behavior-core
+│       ├── pyproject.toml
+│       └── src/behavior_core/
+│           ├── config/       # Configuration management
+│           ├── models/       # Data models (Pydantic)
+│           ├── security/     # Auth, JWT, password hashing
+│           ├── middleware/   # Rate limiting, tracing
+│           ├── metrics/      # Prometheus metrics
+│           └── utils/        # Logging, datetime utilities
+│
+├── packages/                 # Python microservices
+│   ├── audit/                # behavior-audit (port 8004)
+│   │   ├── pyproject.toml
+│   │   └── src/behavior_audit/
+│   ├── insight/              # behavior-insight (port 8003)
+│   ├── mock/                 # behavior-mock (port 8001)
+│   ├── rules/                # behavior-rules (port 8002)
+│   └── stream/               # behavior-stream (Faust)
+│
+├── apps/                     # Frontend applications
+│   └── web/                  # Next.js app (reserved)
+│
+├── infrastructure/           # Infrastructure configs
+│   └── docker/               # Dockerfile, docker-compose
+│
+├── tests/                    # Test suites
+│   ├── test_core/
+│   ├── test_audit/
+│   ├── test_insight/
+│   ├── test_mock/
+│   ├── test_rules/
+│   └── test_stream/
+│
+└── wiki/                     # Documentation
+```
+
+## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                            BehaviorSense                                 │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌────────┐│
-│  │  Mock   │───▶│ Pulsar  │───▶│  Stream │───▶│  Rules  │───▶│ Insight││
-│  │ FastAPI │    │(消息队列)│    │PyFlink  │    │(规则引擎)│    │ FastAPI││
-│  └─────────┘    └─────────┘    └─────────┘    └─────────┘    └────────┘│
-│       │                                                        │         │
-│       │              ┌────────────────────────────────────────┘        │
-│       │              ▼                                                  │
-│       │       ┌─────────────┐                                          │
-│       └──────▶│  Audit      │◀──────── 人工审核流程                      │
-│              │  FastAPI     │                                           │
-│              └─────────────┘                                           │
-│                    │                                                    │
-│                    ▼                                                    │
-│              ┌─────────────┐                                           │
-│              │   Tagging   │◀──────── 自动打标                          │
-│              │   Service   │                                           │
-│              └─────────────┘                                           │
+│                                                                          │
+│   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌────────┐│
+│   │  Mock   │───▶│ Pulsar  │───▶│  Stream │───▶│  Rules  │───▶│ Insight││
+│   │ FastAPI │    │  Queue   │    │  Faust  │    │ Engine  │    │ FastAPI││
+│   │ :8001   │    │  :6650   │    │  (async) │    │  :8002  │    │ :8003  ││
+│   └─────────┘    └─────────┘    └─────────┘    └─────────┘    └────────┘│
+│        │                                                        │        │
+│        │              ┌─────────────────────────────────────────┘        │
+│        │              ▼                                                  │
+│        │       ┌─────────────┐                                          │
+│        └──────▶│   Audit     │◀──────── Human Review Workflow           │
+│                │   FastAPI   │                                          │
+│                │   :8004     │                                          │
+│                └─────────────┘                                          │
+│                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 技术架构
+## Technology Stack
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                          技术组件栈                                   │
+│                          Technology Layers                            │
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                       │
 │   ┌─────────────────────────────────────────────────────────────┐   │
-│   │                    应用层 (FastAPI)                          │   │
-│   │  behavior_mock  │  behavior_rules  │  behavior_insight      │   │
+│   │                Application Layer (FastAPI)                   │   │
+│   │   packages/mock  │  packages/rules  │  packages/insight      │   │
+│   │   packages/audit │  libs/core       │  packages/stream       │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                              │                                        │
 │   ┌─────────────────────────────────────────────────────────────┐   │
-│   │                    流处理层 (PyFlink/Faust)                  │   │
-│   │  窗口聚合  │  模式检测  │  CEP  │  状态管理                   │   │
+│   │                Stream Processing (Faust)                     │   │
+│   │   Window Aggregation  │  Pattern Detection  │  CEP          │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                              │                                        │
 │   ┌─────────────────────────────────────────────────────────────┐   │
-│   │                    消息层 (Apache Pulsar)                    │   │
-│   │  Topic 管理  │  分区  │  持久化  │  订阅管理                  │   │
+│   │                Message Layer (Apache Pulsar)                 │   │
+│   │   Topics  │  Partitions  │  Persistence  │  Subscriptions   │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                              │                                        │
 │   ┌─────────────────────────────────────────────────────────────┐   │
-│   │                    存储层                                    │   │
-│   │  PostgreSQL  │  Redis  │  ClickHouse  │  Elasticsearch      │   │
+│   │                Storage Layer                                 │   │
+│   │   PostgreSQL  │  Redis  │  ClickHouse  │  Elasticsearch    │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                                                                       │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-## 设计原则
+## Data Flow
 
-### 1. 异步优先
+```
+User Behavior Events
+        │
+        ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    Mock     │────▶│   Pulsar    │────▶│   Stream    │────▶│    Rules    │
+│  Generator  │     │    Topic    │     │   Faust     │     │   Engine    │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                  │
+                                                                  ▼
+                                                        ┌─────────────┐
+                                                        │   Insight   │
+                                                        │  Tag/Profile│
+                                                        └─────────────┘
+                                                                  │
+                                                                  ▼
+                                                        ┌─────────────┐
+                                                        │    Audit    │
+                                                        │ Manual Review│
+                                                        └─────────────┘
+```
 
-Python 异步编程模型，充分利用 `asyncio`：
+## Module Responsibilities
 
-- **高并发**: 异步 I/O 处理大量连接
-- **低延迟**: 非阻塞操作减少等待
-- **资源高效**: 单进程处理更多请求
+| Module | Tech | Responsibility | Input | Output |
+|--------|------|----------------|-------|--------|
+| libs/core | Python | Shared models, config, utils | - | - |
+| packages/mock | FastAPI | Generate test events | Config | UserBehavior events |
+| packages/stream | Faust | Stream processing | Events | Aggregations, patterns |
+| packages/rules | FastAPI | Rule matching | Aggregations | Rule triggers |
+| packages/insight | FastAPI | User profiling | Triggers | Tags, profiles |
+| packages/audit | FastAPI | Manual review | Review tasks | Audit results |
+
+## Design Principles
+
+### 1. Monorepo with Workspace
+
+- **uv workspace** for Python dependency management
+- **pnpm workspace** for frontend (reserved)
+- Shared code in `libs/`, services in `packages/`
+
+### 2. Async-First
 
 ```python
-# 异步处理示例
+# Async throughout
 async def process_events():
     async for event in event_stream():
         await process_event(event)
         await update_tags(event.user_id)
 ```
 
-### 2. 流处理优先
+### 3. Stream Processing
 
-- 实时处理用户行为事件，延迟目标 < 1秒
-- 使用 PyFlink/Faust 进行事件时间处理
-- 状态管理支持大规模数据
+- Real-time event processing with latency < 1s
+- Event-time processing with Faust
+- Stateful processing with RocksDB
 
-### 3. 规则与计算分离
+### 4. Rule-Compute Separation
 
-- Stream 模块负责数据聚合和模式检测
-- Rules 模块专注业务规则执行
-- 规则支持热更新，无需重启流处理任务
+- Stream handles aggregation and pattern detection
+- Rules engine focuses on business logic
+- Hot-reload rules without restart
 
-## 数据流设计
+## Scalability
 
-### 核心流程
+### Horizontal Scaling
 
-```
-用户行为事件
-     │
-     ▼
-┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
-│  Mock   │────▶│ Pulsar  │────▶│  Stream │────▶│  Rules  │
-│ FastAPI │     │  Topic  │     │ PyFlink │     │ Engine  │
-└─────────┘     └─────────┘     └─────────┘     └─────────┘
-                                                  │
-                                                  ▼
-                                          ┌─────────────┐
-                                          │   Insight   │
-                                          │  (标签/画像) │
-                                          └─────────────┘
-                                                  │
-                                                  ▼
-                                          ┌─────────────┐
-                                          │   Audit     │
-                                          │  (人工审核)  │
-                                          └─────────────┘
-```
+| Component | Scaling Strategy |
+|-----------|------------------|
+| Pulsar | Add partitions |
+| Faust | Increase parallelism |
+| FastAPI | Add instances behind load balancer |
+| PostgreSQL | Read replicas |
+| Redis | Cluster mode |
 
-### 数据分区策略
+### Vertical Scaling
 
-- 按用户 ID 哈希分区，保证同一用户数据有序
-- 规则匹配按规则类型分区，支持并行处理
-- 标签存储按用户 ID 分片，支持高效查询
+- Increase uvicorn workers
+- Increase memory for Faust state
+- Increase connection pool sizes
 
-## 模块职责边界
+## Fault Tolerance
 
-| 模块 | 技术栈 | 职责 | 数据输入 | 数据输出 |
-|------|--------|------|----------|----------|
-| Mock | FastAPI | 生成模拟数据 | 配置参数 | 用户行为事件 |
-| Pulsar | pulsar-client | 消息传输 | 原始事件 | 标准化事件 |
-| Stream | PyFlink/Faust | 流式计算 | 标准化事件 | 聚合结果/模式匹配 |
-| Rules | Python | 规则执行 | 聚合结果/原始事件 | 规则命中事件 |
-| Insight | FastAPI | 标签管理 | 规则命中事件 | 用户标签/画像 |
-| Audit | FastAPI | 人工审核 | 审核工单 | 审核结果 |
+### Message Persistence
 
-## 扩展性设计
+- Pulsar persistent topics with replication
+- Acknowledgment mechanism for consumers
+- Dead letter queue for failed messages
 
-### 水平扩展
-
-- **Pulsar**: 分区扩展，增加分区数即可提升吞吐
-- **PyFlink**: TaskManager 扩展，增加并行度
-- **FastAPI**: 无状态服务，可任意扩展实例数
-
-### 垂直扩展
-
-- **Worker**: 增加 uvicorn worker 数量
-- **内存**: 增加 Python 进程内存限制
-- **连接池**: 增加数据库/Redis 连接池大小
-
-## 容错设计
-
-### 消息持久化
-
-- Pulsar 消息持久化到磁盘，支持多副本
-- 消费确认机制保证消息不丢失
-- 死信队列处理失败消息
-
-### 检查点机制
+### Checkpointing
 
 ```python
-# Faust 检查点配置
+# Faust checkpoint configuration
 app = faust.App(
     'behavior-sense',
     broker='pulsar://localhost:6650',
@@ -164,65 +204,29 @@ app = faust.App(
 )
 ```
 
-### 服务高可用
+## Monitoring
 
-- FastAPI 多实例部署 + 负载均衡
-- Redis Sentinel / Cluster 高可用
-- PostgreSQL 主从复制
+### Key Metrics
 
-## 监控体系
+| Metric | Description | Alert Threshold |
+|--------|-------------|-----------------|
+| end_to_end_latency | End-to-end delay | > 5s |
+| processing_time | Event processing time | > 1s |
+| rule_match_time | Rule matching time | > 100ms |
+| pulsar_backlog | Message backlog | > 100k |
 
-### 指标监控
-
-| 指标 | 描述 | 告警阈值 |
-|------|------|----------|
-| end_to_end_latency | 端到端延迟 | > 5s |
-| processing_time | 处理时间 | > 1s |
-| rule_match_time | 规则匹配时间 | > 100ms |
-| pulsar_backlog | 消息积压 | > 10w |
-
-### Prometheus 集成
+### Prometheus Integration
 
 ```python
-from prometheus_client import Counter, Histogram, generate_latest
+from behavior_core.metrics import get_metrics
 
-# 定义指标
-EVENT_COUNTER = Counter('events_processed', '处理的事件数')
-LATENCY_HISTOGRAM = Histogram('processing_latency_seconds', '处理延迟')
-
-# 记录指标
-@LATENCY_HISTOGRAM.time()
-async def process_event(event):
-    EVENT_COUNTER.inc()
-    # 处理逻辑
+metrics = get_metrics()
+metrics.increment('events_processed', tags={'type': 'view'})
 ```
 
-### 日志追踪
+## Security
 
-- 使用 `structlog` 结构化日志
-- 全链路 TraceID 追踪
-- 日志聚合查询
-
-```python
-import structlog
-
-logger = structlog.get_logger()
-
-async def process_event(event):
-    log = logger.bind(trace_id=event.event_id, user_id=event.user_id)
-    log.info("event_received", event_type=event.event_type)
-```
-
-## 安全设计
-
-### 认证授权
-
-- API 采用 JWT 认证 (PyJWT)
-- 内部服务采用 mTLS 通信
-- 敏感数据加密存储
-
-### 数据隔离
-
-- 多租户命名空间隔离
-- 按租户进行资源配额管理
-- 数据脱敏处理
+- JWT authentication in `libs/core/security/`
+- Rate limiting middleware
+- TraceID for request tracing
+- SecretStr for sensitive config

@@ -1,4 +1,31 @@
-# API 设计
+# API Design
+
+> RESTful API design for BehaviorSense microservices.
+
+## API Overview
+
+All APIs follow RESTful conventions with unified response format.
+
+---
+
+## Base URLs
+
+| Service | Port | Base URL |
+|---------|------|----------|
+| Mock | 8001 | http://localhost:8001 |
+| Rules | 8002 | http://localhost:8002 |
+| Insight | 8003 | http://localhost:8003 |
+| Audit | 8004 | http://localhost:8004 |
+
+### OpenAPI Documentation
+
+Each service provides Swagger UI at `/docs`:
+- Mock: http://localhost:8001/docs
+- Rules: http://localhost:8002/docs
+- Insight: http://localhost:8003/docs
+- Audit: http://localhost:8004/docs
+
+---
 
 ## API 概览
 
