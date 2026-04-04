@@ -3,16 +3,14 @@
 
 实现触发人工审核的功能，通过调用 audit 服务 API 创建审核工单。
 """
-import logging
 import asyncio
+import logging
 from datetime import datetime
-from typing import Any
 from enum import Enum
+from typing import Any
 
 import httpx
-
 from behavior_core.config.settings import settings
-
 
 logger = logging.getLogger(__name__)
 

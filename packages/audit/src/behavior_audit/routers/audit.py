@@ -4,24 +4,21 @@
 from datetime import datetime
 from typing import Any
 
+from behavior_core.utils.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from behavior_audit.repositories.audit_repo import (
-    AuditRepository,
-    AuditOrder,
-    AuditStatus,
     AuditLevel,
+    AuditRepository,
     get_session,
 )
 from behavior_audit.services.audit_service import (
     AuditService,
-    AuditServiceError,
     InvalidStatusTransitionError,
     OrderNotFoundError,
 )
-from behavior_core.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -3,8 +3,10 @@
 """
 import logging
 import sys
-import structlog
 from typing import Any
+
+import structlog
+
 from behavior_core.config.settings import get_settings
 
 

@@ -4,13 +4,22 @@
 """
 from datetime import datetime
 from typing import Any
-from sqlalchemy import select, update, insert, delete
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy import Column, String, JSON, DateTime, Integer, Float
-from sqlalchemy.orm import declarative_base
+
 from behavior_core.models import UserProfile, UserStat
 from behavior_core.utils.logging import get_logger
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    delete,
+    select,
+)
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import declarative_base
 
 logger = get_logger(__name__)
 

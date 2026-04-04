@@ -4,11 +4,11 @@
 实现滚动窗口、滑动窗口和会话窗口。
 """
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
-from typing import Any, Callable, Generator, Generic, TypeVar
-from dataclasses import dataclass, field
 from collections import defaultdict
-import time
+from collections.abc import Callable, Generator
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -117,7 +117,7 @@ class WindowFunction(ABC, Generic[T, R]):
     def cleanup(self) -> int:
         """清理过期窗口"""
         count = 0
-        for key, window in self.get_expired_windows():
+        for _key, _window in self.get_expired_windows():
             count += 1
         return count
 
@@ -377,5 +377,8 @@ class WindowAggregator:
     @staticmethod
     def distinct_count(values: list[Any], field: str) -> int:
         """去重计数"""
-        field_values = {v.get(field) for v in values if isinstance(v, dict) and v.get(field) is not None}
+        field_values = {
+            v.get(field) for v in values
+            if isinstance(v, dict) and v.get(field) is not None
+        }
         return len(field_values)

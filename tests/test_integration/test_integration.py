@@ -41,7 +41,8 @@ class TestMockToInsight:
 
         for event in events:
             assert event.user_id.startswith("user_")
-            assert event.event_type in EventType
+            # event_type 是字符串值（因为 use_enum_values=True），需要验证是否有效
+            assert event.event_type in [e.value for e in EventType]
 
     @pytest.mark.asyncio
     async def test_rule_evaluation(self, rule_engine):

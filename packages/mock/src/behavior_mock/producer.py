@@ -4,11 +4,12 @@ Pulsar 消息生产者
 负责将用户行为事件发送到 Pulsar 消息队列。
 """
 import asyncio
-from typing import Callable
-import pulsar
+from collections.abc import Callable
+
 import orjson
-from behavior_core.models.event import UserBehavior
+import pulsar
 from behavior_core.config.settings import get_settings
+from behavior_core.models.event import UserBehavior
 from behavior_core.utils.logging import get_logger
 
 logger = get_logger(__name__)

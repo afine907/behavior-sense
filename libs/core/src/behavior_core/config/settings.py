@@ -1,10 +1,11 @@
 """
 应用配置管理
 """
-from pydantic_settings import BaseSettings
-from pydantic import SecretStr, field_validator
 from functools import lru_cache
 from typing import Literal
+
+from pydantic import SecretStr, field_validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -50,7 +51,8 @@ class Settings(BaseSettings):
     es_password: SecretStr = SecretStr("")
 
     # JWT 配置
-    jwt_secret_key: SecretStr = SecretStr("change-this-secret-key-in-production")  # 必须通过环境变量设置
+    # 必须通过环境变量设置
+    jwt_secret_key: SecretStr = SecretStr("change-this-secret-key-in-production")
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 24
     jwt_issuer: str = "behavior-sense"
@@ -64,7 +66,10 @@ class Settings(BaseSettings):
     insight_port: int = 8003
     audit_port: int = 8004
 
-    @field_validator("postgres_password", "clickhouse_password", "es_password", "redis_password", mode="before")
+    @field_validator(
+        "postgres_password", "clickhouse_password", "es_password", "redis_password",
+        mode="before"
+    )
     @classmethod
     def validate_password(cls, v):
         """验证密码不为空（生产环境）"""

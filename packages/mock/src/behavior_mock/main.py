@@ -6,17 +6,15 @@ FastAPI 应用入口
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
-from fastapi.responses import JSONResponse
+from behavior_core.config.settings import get_settings
+from behavior_core.models.event import EventType
+from behavior_core.utils.logging import get_logger, setup_logging
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from behavior_core.models.event import UserBehavior, EventType
-from behavior_core.config.settings import get_settings
-from behavior_core.utils.logging import setup_logging, get_logger
 from behavior_mock.generator import BehaviorGenerator, WeightedBehaviorGenerator
-from behavior_mock.producer import PulsarProducer, MockProducer
+from behavior_mock.producer import MockProducer, PulsarProducer
 from behavior_mock.scenarios import (
     Scenario,
     ScenarioStatus,
@@ -258,7 +256,8 @@ async def start_scenario(
     - abnormal: 异常流量
     - gradual: 渐进负载
     """
-    scenario_id = request.scenario_id or f"{request.scenario_type}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    scenario_id = request.scenario_id or f"{request.scenario_type}-{timestamp}"
 
     # 检查是否已存在
     if scenario_id in _scenario_registry:

@@ -3,19 +3,19 @@ BehaviorSense Audit Service
 人工审核服务模块
 """
 from behavior_audit.repositories.audit_repo import (
-    AuditStatus,
     AuditLevel,
     AuditOrder,
     AuditOrderCreate,
     AuditOrderUpdate,
     AuditRepository,
+    AuditStatus,
 )
 from behavior_audit.services.audit_service import (
     AuditService,
     AuditServiceError,
+    AuditStateMachine,
     InvalidStatusTransitionError,
     OrderNotFoundError,
-    AuditStateMachine,
 )
 
 __all__ = [

@@ -3,11 +3,11 @@
 
 生成模拟用户行为数据，支持多种事件类型和场景。
 """
-import random
 import asyncio
-from datetime import datetime
-from typing import AsyncIterator
-from behavior_core.models.event import UserBehavior, EventType
+import random
+from collections.abc import AsyncIterator
+
+from behavior_core.models.event import EventType, UserBehavior
 from behavior_core.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,9 +33,8 @@ class BehaviorGenerator:
         self.user_pool_size = user_pool_size
         self.event_types = event_types or list(EventType)
         self._seed = seed
-
-        if seed is not None:
-            random.seed(seed)
+        # 使用独立的随机生成器实例，避免全局状态影响
+        self._rng = random.Random(seed)
 
         # 模拟页面列表
         self._pages = [
@@ -75,10 +74,10 @@ class BehaviorGenerator:
         Returns:
             UserBehavior: 生成的用户行为事件
         """
-        user_id = f"user_{random.randint(1, self.user_pool_size)}"
-        event_type = random.choice(self.event_types)
-        session_id = f"session_{random.randint(1, 100)}"
-        page_url = random.choice(self._pages) if random.random() > 0.3 else None
+        user_id = f"user_{self._rng.randint(1, self.user_pool_size)}"
+        event_type = self._rng.choice(self.event_types)
+        session_id = f"session_{self._rng.randint(1, 100)}"
+        page_url = self._rng.choice(self._pages) if self._rng.random() > 0.3 else None
 
         properties = self._generate_properties(event_type)
 
@@ -112,54 +111,55 @@ class BehaviorGenerator:
         properties = {}
 
         if event_type == EventType.VIEW:
-            properties["page_url"] = random.choice(self._pages)
-            properties["stay_duration"] = random.randint(5, 300)
-            properties["scroll_depth"] = round(random.uniform(0, 1), 2)
+            properties["page_url"] = self._rng.choice(self._pages)
+            properties["stay_duration"] = self._rng.randint(5, 300)
+            properties["scroll_depth"] = round(self._rng.uniform(0, 1), 2)
 
         elif event_type == EventType.CLICK:
-            properties["element_id"] = f"btn_{random.randint(1, 50)}"
-            properties["element_type"] = random.choice(["button", "link", "image", "banner"])
-            properties["x"] = random.randint(0, 1920)
-            properties["y"] = random.randint(0, 1080)
+            properties["element_id"] = f"btn_{self._rng.randint(1, 50)}"
+            properties["element_type"] = self._rng.choice(["button", "link", "image", "banner"])
+            properties["x"] = self._rng.randint(0, 1920)
+            properties["y"] = self._rng.randint(0, 1080)
 
         elif event_type == EventType.SEARCH:
-            properties["keyword"] = random.choice(self._keywords)
-            properties["result_count"] = random.randint(0, 100)
-            properties["page_number"] = random.randint(1, 10)
-            properties["filters"] = random.choice([{}, {"price_min": 100}, {"brand": "test"}])
+            properties["keyword"] = self._rng.choice(self._keywords)
+            properties["result_count"] = self._rng.randint(0, 100)
+            properties["page_number"] = self._rng.randint(1, 10)
+            properties["filters"] = self._rng.choice([{}, {"price_min": 100}, {"brand": "test"}])
 
         elif event_type == EventType.PURCHASE:
-            properties["product_id"] = random.choice(self._products)
-            properties["amount"] = round(random.uniform(10, 5000), 2)
-            properties["quantity"] = random.randint(1, 5)
-            properties["payment_method"] = random.choice(["alipay", "wechat", "credit_card"])
+            properties["product_id"] = self._rng.choice(self._products)
+            properties["amount"] = round(self._rng.uniform(10, 5000), 2)
+            properties["quantity"] = self._rng.randint(1, 5)
+            properties["payment_method"] = self._rng.choice(["alipay", "wechat", "credit_card"])
 
         elif event_type == EventType.COMMENT:
-            properties["product_id"] = random.choice(self._products)
-            properties["rating"] = random.randint(1, 5)
-            properties["content_length"] = random.randint(10, 200)
-            properties["has_image"] = random.random() > 0.7
+            properties["product_id"] = self._rng.choice(self._products)
+            properties["rating"] = self._rng.randint(1, 5)
+            properties["content_length"] = self._rng.randint(10, 200)
+            properties["has_image"] = self._rng.random() > 0.7
 
         elif event_type == EventType.LOGIN:
-            properties["login_method"] = random.choice(["password", "sms", "wechat", "qq"])
-            properties["device_type"] = random.choice(["mobile", "desktop", "tablet"])
-            properties["success"] = random.random() > 0.1  # 90% 成功率
+            properties["login_method"] = self._rng.choice(["password", "sms", "wechat", "qq"])
+            properties["device_type"] = self._rng.choice(["mobile", "desktop", "tablet"])
+            properties["success"] = self._rng.random() > 0.1  # 90% 成功率
 
         elif event_type == EventType.LOGOUT:
-            properties["session_duration"] = random.randint(60, 7200)
+            properties["session_duration"] = self._rng.randint(60, 7200)
 
         elif event_type == EventType.REGISTER:
-            properties["register_method"] = random.choice(["email", "phone", "third_party"])
-            properties["invite_code"] = random.choice([None, f"INV{random.randint(1000, 9999)}"])
+            properties["register_method"] = self._rng.choice(["email", "phone", "third_party"])
+            invite = f"INV{self._rng.randint(1000, 9999)}"
+            properties["invite_code"] = self._rng.choice([None, invite])
 
         elif event_type == EventType.FAVORITE:
-            properties["product_id"] = random.choice(self._products)
-            properties["action"] = random.choice(["add", "remove"])
+            properties["product_id"] = self._rng.choice(self._products)
+            properties["action"] = self._rng.choice(["add", "remove"])
 
         elif event_type == EventType.SHARE:
-            properties["product_id"] = random.choice(self._products)
-            properties["platform"] = random.choice(["wechat", "weibo", "qq", "link"])
-            properties["content_type"] = random.choice(["product", "activity", "article"])
+            properties["product_id"] = self._rng.choice(self._products)
+            properties["platform"] = self._rng.choice(["wechat", "weibo", "qq", "link"])
+            properties["content_type"] = self._rng.choice(["product", "activity", "article"])
 
         return properties
 
@@ -254,14 +254,14 @@ class WeightedBehaviorGenerator(BehaviorGenerator):
 
     def generate(self) -> UserBehavior:
         """生成带权重的用户行为"""
-        user_id = f"user_{random.randint(1, self.user_pool_size)}"
-        event_type = random.choices(
+        user_id = f"user_{self._rng.randint(1, self.user_pool_size)}"
+        event_type = self._rng.choices(
             self._weighted_events,
             weights=self._weights,
             k=1,
         )[0]
-        session_id = f"session_{random.randint(1, 100)}"
-        page_url = random.choice(self._pages) if random.random() > 0.3 else None
+        session_id = f"session_{self._rng.randint(1, 100)}"
+        page_url = self._rng.choice(self._pages) if self._rng.random() > 0.3 else None
 
         properties = self._generate_properties(event_type)
 

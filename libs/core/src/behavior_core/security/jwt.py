@@ -3,7 +3,7 @@ JWT Token 处理模块
 
 提供 JWT Token 的创建和解码功能。
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jose import JWTError, jwt
@@ -51,9 +51,9 @@ def create_access_token(
     settings = get_settings()
 
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             hours=settings.jwt_expire_hours
         )
 
@@ -100,7 +100,7 @@ def decode_access_token(token: str) -> TokenData | None:
             sub=payload.get("sub", ""),
             username=payload.get("username"),
             roles=payload.get("roles", []),
-            exp=datetime.fromtimestamp(payload.get("exp", 0), tz=timezone.utc),
+            exp=datetime.fromtimestamp(payload.get("exp", 0), tz=UTC),
         )
         return token_data
 
@@ -123,7 +123,7 @@ def verify_token(token: str) -> bool:
         return False
 
     # 检查是否过期
-    if token_data.exp and token_data.exp < datetime.now(timezone.utc):
+    if token_data.exp and token_data.exp < datetime.now(UTC):
         return False
 
     return True

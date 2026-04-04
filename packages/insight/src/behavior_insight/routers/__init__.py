@@ -1,6 +1,6 @@
 """
 API 路由
 """
-from behavior_insight.routers import tags, profile
+from behavior_insight.routers import profile, tags
 
 __all__ = ["tags", "profile"]

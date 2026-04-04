@@ -4,9 +4,9 @@
 from behavior_audit.services.audit_service import (
     AuditService,
     AuditServiceError,
+    AuditStateMachine,
     InvalidStatusTransitionError,
     OrderNotFoundError,
-    AuditStateMachine,
 )
 
 __all__ = [

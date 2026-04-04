@@ -3,22 +3,23 @@ BehaviorSense Insight 服务
 洞察分析服务 - 标签管理、用户画像、分析报表
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+
+import redis.asyncio as redis
+from behavior_core.config.settings import get_settings
+from behavior_core.metrics import get_metrics, set_service_info
+from behavior_core.middleware.rate_limit import RateLimitMiddleware
+from behavior_core.middleware.tracing import TraceIDMiddleware
+from behavior_core.utils.logging import get_logger, setup_logging
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
-import redis.asyncio as redis
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from behavior_core.config.settings import get_settings
-from behavior_core.utils.logging import setup_logging, get_logger
-from behavior_core.middleware.tracing import TraceIDMiddleware
-from behavior_core.middleware.rate_limit import RateLimitMiddleware
-from behavior_core.metrics import get_metrics, set_service_info, increment_request_counter
-from behavior_insight.services.tag_service import TagService
 from behavior_insight.repositories.user_repo import UserRepository, init_database
-from behavior_insight.routers import tags, profile
+from behavior_insight.routers import profile, tags
+from behavior_insight.services.tag_service import TagService
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -89,7 +90,12 @@ app.add_middleware(
 )
 
 # 配置 CORS (从配置读取允许的域名)
-cors_origins = settings.cors_origins.split(",") if settings.cors_origins else ["*"] if settings.debug else []
+if settings.cors_origins:
+    cors_origins = settings.cors_origins.split(",")
+elif settings.debug:
+    cors_origins = ["*"]
+else:
+    cors_origins = []
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,

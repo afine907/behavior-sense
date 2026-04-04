@@ -6,13 +6,14 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from behavior_audit.repositories.audit_repo import (
-    AuditRepository,
-    AuditOrder,
-    AuditStatus,
-    AuditLevel,
-)
 from behavior_core.utils.logging import get_logger
+
+from behavior_audit.repositories.audit_repo import (
+    AuditLevel,
+    AuditOrder,
+    AuditRepository,
+    AuditStatus,
+)
 
 logger = get_logger(__name__)
 
@@ -82,7 +83,7 @@ class AuditService:
             创建的审核工单
         """
         # 验证审核级别
-        if level not in [l.value for l in AuditLevel]:
+        if level not in [lvl.value for lvl in AuditLevel]:
             level = AuditLevel.MEDIUM.value
 
         order = AuditOrder(

@@ -1,21 +1,21 @@
 """
 BehaviorSense 核心库
 """
+from behavior_core.config.settings import Settings, get_settings, settings
 from behavior_core.models import (
-    EventType,
-    UserBehavior,
-    StandardEvent,
     AggregationResult,
     AlertEvent,
-    UserStatus,
-    UserLevel,
+    EventType,
+    StandardEvent,
     TagSource,
     TagValue,
-    UserTags,
+    UserBehavior,
+    UserLevel,
     UserProfile,
     UserStat,
+    UserStatus,
+    UserTags,
 )
-from behavior_core.config.settings import Settings, get_settings, settings
 
 __all__ = [
     # 事件模型

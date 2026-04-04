@@ -2,9 +2,10 @@
 用户相关模型
 """
 from datetime import datetime
-from typing import Any
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 class UserStatus(str, Enum):

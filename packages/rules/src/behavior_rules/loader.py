@@ -6,15 +6,15 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import yaml
 
-from behavior_rules.models import Rule, RuleAction, ActionType
 from behavior_rules.engine import RuleEngine
-
+from behavior_rules.models import ActionType, Rule, RuleAction
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class YamlRuleLoader(BaseRuleLoader):
             规则列表
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = yaml.safe_load_all(f)
                 rules: list[Rule] = []
 
@@ -347,7 +347,7 @@ class DbRuleLoader(BaseRuleLoader):
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # 如果事件循环正在运行，创建任务
-            future = asyncio.ensure_future(self._load_async())
+            asyncio.ensure_future(self._load_async())
             # 不能在运行的事件循环中等待，返回空列表
             logger.warning("Cannot load synchronously while event loop is running")
             return []
@@ -442,7 +442,7 @@ class DbRuleLoader(BaseRuleLoader):
         # 同步方法，需要事件循环
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            future = asyncio.ensure_future(self._reload_async())
+            asyncio.ensure_future(self._reload_async())
             return []
         else:
             return loop.run_until_complete(self._reload_async())

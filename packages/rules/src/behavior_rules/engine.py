@@ -3,17 +3,16 @@
 
 实现规则注册、评估和动作执行的核心逻辑。
 """
-import asyncio
-import time
-import logging
 import ast
+import asyncio
+import logging
 import operator
 import threading
-from typing import Any, Callable, Coroutine
-from collections.abc import Awaitable
+import time
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from behavior_rules.models import Rule, RuleAction, RuleMatchResult
-
 
 logger = logging.getLogger(__name__)
 
@@ -335,7 +334,10 @@ class RuleEngine:
         # 允许下标访问
         if isinstance(node, ast.Subscript):
             value = self._eval_ast_node(node.value, context)
-            slice_val = self._eval_ast_node(node.slice, context) if isinstance(node.slice, ast.AST) else node.slice
+            if isinstance(node.slice, ast.AST):
+                slice_val = self._eval_ast_node(node.slice, context)
+            else:
+                slice_val = node.slice
             return value[slice_val]
 
         # 允许属性访问 (受限)

@@ -2,20 +2,20 @@
 行为核心模型
 """
 from behavior_core.models.event import (
-    EventType,
-    UserBehavior,
-    StandardEvent,
     AggregationResult,
     AlertEvent,
+    EventType,
+    StandardEvent,
+    UserBehavior,
 )
 from behavior_core.models.user import (
-    UserStatus,
-    UserLevel,
     TagSource,
     TagValue,
-    UserTags,
+    UserLevel,
     UserProfile,
     UserStat,
+    UserStatus,
+    UserTags,
 )
 
 __all__ = [

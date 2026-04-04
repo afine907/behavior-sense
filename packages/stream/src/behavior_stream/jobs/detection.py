@@ -8,22 +8,20 @@
 - 输出到 alerts topic
 """
 import asyncio
-import orjson
-from datetime import datetime, timedelta
 from collections import defaultdict
+from datetime import datetime, timedelta
 from typing import Any
-import statistics
+
+import orjson
+from behavior_core.config.settings import get_settings
+from behavior_core.models.event import AlertEvent, EventType, UserBehavior
 
 from behavior_stream.app import (
+    alerts_topic,
     app,
     user_behavior_topic,
-    alerts_topic,
-    user_login_failures,
     user_stats_table,
 )
-from behavior_stream.operators.window import SlidingWindow, SessionWindow
-from behavior_core.models.event import UserBehavior, AlertEvent, EventType
-from behavior_core.config.settings import get_settings
 
 settings = get_settings()
 

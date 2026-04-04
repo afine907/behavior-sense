@@ -3,8 +3,9 @@ Faust 应用配置
 
 定义 Faust 应用、Topic 和状态存储。
 """
-import faust
 from datetime import timedelta
+
+import faust
 from behavior_core.config.settings import get_settings
 
 settings = get_settings()

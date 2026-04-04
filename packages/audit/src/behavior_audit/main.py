@@ -6,17 +6,17 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 import redis.asyncio as redis
+from behavior_core.config.settings import get_settings
+from behavior_core.metrics import get_metrics, set_service_info
+from behavior_core.middleware.rate_limit import RateLimitMiddleware
+from behavior_core.middleware.tracing import TraceIDMiddleware
+from behavior_core.utils.logging import get_logger, setup_logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
-from behavior_core.config.settings import get_settings
-from behavior_core.utils.logging import setup_logging, get_logger
-from behavior_core.middleware.tracing import TraceIDMiddleware
-from behavior_core.middleware.rate_limit import RateLimitMiddleware
-from behavior_core.metrics import get_metrics, set_service_info
+from behavior_audit.repositories.audit_repo import get_engine, init_db
 from behavior_audit.routers.audit import router as audit_router
-from behavior_audit.repositories.audit_repo import init_db, get_engine
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -82,7 +82,12 @@ def create_app() -> FastAPI:
     )
 
     # 配置 CORS (从配置读取允许的域名)
-    cors_origins = settings.cors_origins.split(",") if settings.cors_origins else ["*"] if settings.debug else []
+    if settings.cors_origins:
+        cors_origins = settings.cors_origins.split(",")
+    elif settings.debug:
+        cors_origins = ["*"]
+    else:
+        cors_origins = []
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,

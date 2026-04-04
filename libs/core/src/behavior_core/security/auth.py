@@ -7,11 +7,10 @@ from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
-from behavior_core.security.jwt import decode_access_token, TokenData
-
+from behavior_core.security.jwt import TokenData, decode_access_token
 
 # 密码哈希上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

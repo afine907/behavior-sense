@@ -7,13 +7,11 @@ from enum import Enum
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import select, func, and_, or_
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlmodel import SQLModel, Field
-from sqlalchemy import JSON
-
 from behavior_core.config.settings import get_settings
 from behavior_core.utils.logging import get_logger
+from sqlalchemy import JSON, and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlmodel import Field, SQLModel
 
 logger = get_logger(__name__)
 
@@ -238,7 +236,10 @@ class AuditRepository:
 class DatabaseManager:
     """数据库管理器（支持依赖注入）"""
 
-    def __init__(self, database_url: str, pool_size: int = 10, max_overflow: int = 20, debug: bool = False):
+    def __init__(
+        self, database_url: str, pool_size: int = 10,
+        max_overflow: int = 20, debug: bool = False
+    ):
         self._database_url = database_url
         self._pool_size = pool_size
         self._max_overflow = max_overflow

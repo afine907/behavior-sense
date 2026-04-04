@@ -5,12 +5,9 @@
 """
 import logging
 from typing import Any
-from contextlib import asynccontextmanager
 
 import httpx
-
 from behavior_core.config.settings import settings
-
 
 logger = logging.getLogger(__name__)
 

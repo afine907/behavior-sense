@@ -8,26 +8,25 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
+from behavior_core.config.settings import settings
+from behavior_core.metrics import get_metrics, set_service_info
+from behavior_core.middleware.rate_limit import RateLimitMiddleware
+from behavior_core.middleware.tracing import TraceIDMiddleware
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
-from behavior_core.config.settings import settings
-from behavior_core.middleware.tracing import TraceIDMiddleware
-from behavior_core.middleware.rate_limit import RateLimitMiddleware
-from behavior_core.metrics import get_metrics, set_service_info
+from behavior_rules.actions import tag_user, trigger_audit
+from behavior_rules.engine import get_rule_engine
+from behavior_rules.loader import DbRuleLoader, YamlRuleLoader
 from behavior_rules.models import (
+    EvaluateRequest,
+    EvaluateResponse,
     Rule,
     RuleCreate,
-    RuleUpdate,
     RuleMatchResult,
-    EvaluateRequest,
-    EvaluateResponse
+    RuleUpdate,
 )
-from behavior_rules.engine import RuleEngine, get_rule_engine
-from behavior_rules.loader import YamlRuleLoader, DbRuleLoader
-from behavior_rules.actions import tag_user, trigger_audit
-
 
 # 规则存储（简化实现，实际应使用数据库）
 _rules_store: dict[str, Rule] = {}
@@ -94,7 +93,12 @@ app.add_middleware(
 )
 
 # 配置 CORS (从配置读取允许的域名)
-cors_origins = settings.cors_origins.split(",") if settings.cors_origins else ["*"] if settings.debug else []
+if settings.cors_origins:
+    cors_origins = settings.cors_origins.split(",")
+elif settings.debug:
+    cors_origins = ["*"]
+else:
+    cors_origins = []
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,

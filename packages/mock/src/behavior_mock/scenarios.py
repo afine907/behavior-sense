@@ -6,13 +6,14 @@
 import asyncio
 import random
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import AsyncIterator
 from enum import Enum
 
-from behavior_core.models.event import UserBehavior, EventType
-from behavior_mock.generator import BehaviorGenerator, WeightedBehaviorGenerator
+from behavior_core.models.event import EventType, UserBehavior
 from behavior_core.utils.logging import get_logger
+
+from behavior_mock.generator import BehaviorGenerator, WeightedBehaviorGenerator
 
 logger = get_logger(__name__)
 

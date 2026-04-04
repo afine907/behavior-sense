@@ -44,7 +44,8 @@ class TestBehaviorGenerator:
 
         assert event is not None
         assert event.user_id.startswith("user_")
-        assert event.event_type in EventType
+        # event_type 是字符串值（因为 use_enum_values=True），需要验证是否有效
+        assert event.event_type in [e.value for e in EventType]
         assert event.event_id is not None
         assert event.timestamp is not None
 
@@ -56,7 +57,8 @@ class TestBehaviorGenerator:
         assert len(events) == 100
         for event in events:
             assert event.user_id.startswith("user_")
-            assert event.event_type in EventType
+            # event_type 是字符串值（因为 use_enum_values=True），需要验证是否有效
+            assert event.event_type in [e.value for e in EventType]
 
     def test_generate_view_event_properties(self):
         """测试 VIEW 事件属性"""

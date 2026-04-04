@@ -2,9 +2,11 @@
 画像 API 路由
 """
 from typing import Any
-from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel, Field
+
 from behavior_core.models import UserProfile, UserStat
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+
 from behavior_insight.repositories.user_repo import UserRepository
 from behavior_insight.services.tag_service import TagService
 

@@ -3,11 +3,11 @@ Prometheus 指标模块
 
 提供统一的 Prometheus 指标定义和收集功能。
 """
-from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry
-from functools import wraps
 import time
-from typing import Callable
+from collections.abc import Callable
+from functools import wraps
 
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
 
 # 创建独立的注册表，避免全局污染
 METRICS_REGISTRY = CollectorRegistry()
@@ -220,7 +220,7 @@ def metrics_middleware(request_path: str) -> Callable:
             try:
                 result = await func(*args, **kwargs)
                 return result
-            except Exception as e:
+            except Exception:
                 status_code = 500
                 raise
             finally:

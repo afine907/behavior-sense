@@ -7,21 +7,21 @@
 - 购买金额统计
 - 输出到 aggregation-result topic
 """
-import asyncio
-import orjson
-from datetime import datetime, timedelta
 from collections import defaultdict
+from datetime import datetime, timedelta
 from typing import Any
 
+import orjson
+from behavior_core.config.settings import get_settings
+from behavior_core.models.event import AggregationResult, EventType, UserBehavior
+
 from behavior_stream.app import (
+    aggregation_result_topic,
     app,
     user_behavior_topic,
-    aggregation_result_topic,
     user_stats_table,
 )
-from behavior_stream.operators.window import TumblingWindow, WindowAggregator
-from behavior_core.models.event import UserBehavior, AggregationResult, EventType
-from behavior_core.config.settings import get_settings
+from behavior_stream.operators.window import TumblingWindow
 
 settings = get_settings()
 

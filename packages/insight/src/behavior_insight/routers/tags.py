@@ -3,9 +3,11 @@
 """
 from datetime import datetime
 from typing import Any
-from fastapi import APIRouter, HTTPException, Depends, Request
+
+from behavior_core.models import TagSource, UserTags
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from behavior_core.models import TagValue, TagSource, UserTags
+
 from behavior_insight.services.tag_service import TagService
 
 router = APIRouter(prefix="/api/insight/user", tags=["tags"])

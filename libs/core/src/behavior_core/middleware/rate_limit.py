@@ -4,16 +4,13 @@ API 限流中间件
 基于 Redis 的滑动窗口限流算法。
 """
 import time
-from typing import Callable
 
+import redis.asyncio as redis
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-import redis.asyncio as redis
 
-from behavior_core.config.settings import get_settings
 from behavior_core.utils.logging import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -78,7 +75,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             响应对象
         """
         # 健康检查和 metrics 端点不限流
-        if request.url.path in ["/health", "/ready", "/metrics", "/openapi.json", "/docs", "/redoc"]:
+        skip_paths = ["/health", "/ready", "/metrics", "/openapi.json", "/docs", "/redoc"]
+        if request.url.path in skip_paths:
             return await call_next(request)
 
         client_ip = self._get_client_ip(request)

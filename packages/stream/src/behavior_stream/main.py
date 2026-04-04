@@ -3,13 +3,10 @@ behavior_stream 入口
 
 启动 Faust worker，注册所有任务。
 """
-import asyncio
-import sys
-from typing import Any
+
+from behavior_core.config.settings import get_settings
 
 from behavior_stream.app import app
-from behavior_stream.jobs import aggregation, detection
-from behavior_core.config.settings import get_settings
 
 settings = get_settings()
 

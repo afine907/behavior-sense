@@ -4,12 +4,11 @@
 为每个请求生成唯一的 TraceID，便于日志追踪。
 """
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-
 
 logger = structlog.get_logger()
 

@@ -4,16 +4,16 @@
 用于生成模拟用户行为数据，支持多种事件类型和场景。
 """
 from behavior_mock.generator import BehaviorGenerator, WeightedBehaviorGenerator
-from behavior_mock.producer import PulsarProducer, MockProducer
+from behavior_mock.producer import MockProducer, PulsarProducer
 from behavior_mock.scenarios import (
+    SCENARIO_REGISTRY,
+    AbnormalTrafficScenario,
+    FlashSaleScenario,
+    GradualLoadScenario,
+    NormalScenario,
     Scenario,
     ScenarioStatus,
-    NormalScenario,
-    FlashSaleScenario,
-    AbnormalTrafficScenario,
-    GradualLoadScenario,
     create_scenario,
-    SCENARIO_REGISTRY,
 )
 
 __all__ = [

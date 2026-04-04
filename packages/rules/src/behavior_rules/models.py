@@ -3,11 +3,12 @@
 
 定义规则引擎所需的数据模型，包括规则条件、动作和匹配结果。
 """
+import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel, Field
-import uuid
 
 
 class ActionType(str, Enum):

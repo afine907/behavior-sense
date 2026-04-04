@@ -2,11 +2,12 @@
 标签服务
 使用 Redis 存储标签数据
 """
+import json
 from datetime import datetime
 from typing import Any
-import json
+
 import redis.asyncio as redis
-from behavior_core.models import TagValue, TagSource, UserTags
+from behavior_core.models import TagSource, TagValue, UserTags
 from behavior_core.utils.logging import get_logger
 
 logger = get_logger(__name__)
