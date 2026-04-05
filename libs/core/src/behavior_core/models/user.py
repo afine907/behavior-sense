@@ -1,11 +1,11 @@
 """
 用户相关模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserStatus(str, Enum):
@@ -33,27 +33,27 @@ class TagSource(str, Enum):
     IMPORT = "import"      # 导入
 
 
+def _utc_now() -> datetime:
+    """获取当前 UTC 时间"""
+    return datetime.now(timezone.utc)
+
+
 class TagValue(BaseModel):
     """标签值模型"""
     value: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utc_now)
     confidence: float = 1.0
     source: TagSource = TagSource.AUTO
     expire_at: datetime | None = None
-
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class UserTags(BaseModel):
     """用户标签模型"""
     user_id: str
-    tags: dict[str, TagValue] = Field(default_factory=dict)
-    last_update: datetime = Field(default_factory=datetime.utcnow)
+    tags: dict[str, "TagValue"] = Field(default_factory=dict)
+    last_update: datetime = Field(default_factory=_utc_now)
 
-    def get_tag(self, tag_name: str) -> TagValue | None:
+    def get_tag(self, tag_name: str) -> "TagValue | None":
         """获取标签值"""
         return self.tags.get(tag_name)
 
@@ -70,13 +70,13 @@ class UserTags(BaseModel):
             source=source,
             confidence=confidence,
         )
-        self.last_update = datetime.utcnow()
+        self.last_update = _utc_now()
 
     def remove_tag(self, tag_name: str) -> bool:
         """移除标签"""
         if tag_name in self.tags:
             del self.tags[tag_name]
-            self.last_update = datetime.utcnow()
+            self.last_update = _utc_now()
             return True
         return False
 
@@ -89,13 +89,8 @@ class UserProfile(BaseModel):
     stat_tags: dict[str, Any] = Field(default_factory=dict)
     predict_tags: dict[str, Any] = Field(default_factory=dict)
     risk_level: str = "low"
-    create_time: datetime = Field(default_factory=datetime.utcnow)
-    update_time: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    create_time: datetime = Field(default_factory=_utc_now)
+    update_time: datetime = Field(default_factory=_utc_now)
 
 
 class UserStat(BaseModel):
@@ -125,9 +120,4 @@ class UserStat(BaseModel):
     last_purchase_time: datetime | None = None
     last_login_time: datetime | None = None
 
-    update_time: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
-        }
+    update_time: datetime = Field(default_factory=_utc_now)

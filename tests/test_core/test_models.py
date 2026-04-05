@@ -137,7 +137,7 @@ class TestStandardEvent:
             event_id="evt_001",
             user_id="user_001",
             event_type="view",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         assert event.event_id == "evt_001"
         assert event.tags == []
@@ -148,7 +148,7 @@ class TestStandardEvent:
             event_id="evt_001",
             user_id="user_001",
             event_type="purchase",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             tags=["high_value", "vip"],
         )
         assert len(event.tags) == 2
@@ -162,8 +162,8 @@ class TestAggregationResult:
         """测试创建聚合结果"""
         result = AggregationResult(
             user_id="user_001",
-            window_start=datetime.utcnow(),
-            window_end=datetime.utcnow() + timedelta(hours=1),
+            window_start=datetime.now(timezone.utc),
+            window_end=datetime.now(timezone.utc) + timedelta(hours=1),
         )
         assert result.event_count == 0
         assert result.purchase_count == 0
@@ -173,8 +173,8 @@ class TestAggregationResult:
         """测试带数据的聚合结果"""
         result = AggregationResult(
             user_id="user_001",
-            window_start=datetime.utcnow(),
-            window_end=datetime.utcnow() + timedelta(hours=1),
+            window_start=datetime.now(timezone.utc),
+            window_end=datetime.now(timezone.utc) + timedelta(hours=1),
             event_count=100,
             view_count=80,
             click_count=15,

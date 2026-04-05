@@ -7,7 +7,7 @@ import asyncio
 import random
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from behavior_core.models.event import EventType, UserBehavior
@@ -69,7 +69,7 @@ class Scenario(ABC):
         """获取已运行时间(秒)"""
         if self._start_time is None:
             return None
-        return (datetime.utcnow() - self._start_time).total_seconds()
+        return (datetime.now(timezone.utc) - self._start_time).total_seconds()
 
     @abstractmethod
     async def stream(self) -> AsyncIterator[UserBehavior]:
@@ -88,7 +88,7 @@ class Scenario(ABC):
             return
 
         self._status = ScenarioStatus.RUNNING
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now(timezone.utc)
         self._stop_event.clear()
         logger.info("scenario_started", scenario_id=self.scenario_id)
 

@@ -2,7 +2,7 @@
 审核仓库层
 实现审核工单的数据访问
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -85,7 +85,7 @@ class AuditRepository:
 
     async def update(self, order: AuditOrder) -> AuditOrder:
         """更新工单"""
-        order.update_time = datetime.utcnow()
+        order.update_time = datetime.now(timezone.utc)
         self._session.add(order)
         await self._session.commit()
         await self._session.refresh(order)
@@ -206,7 +206,7 @@ class AuditRepository:
             level_counts[row.audit_level] = row.count
 
         # 今日新增（可与上述查询合并，但为代码清晰保持独立）
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         today_stmt = select(func.count(AuditOrder.id)).where(
             AuditOrder.create_time >= today
         )

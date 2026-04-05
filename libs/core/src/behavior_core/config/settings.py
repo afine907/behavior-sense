@@ -5,11 +5,16 @@ from functools import lru_cache
 from typing import Literal
 
 from pydantic import SecretStr, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """应用配置"""
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # 应用配置
     app_name: str = "behavior-sense"
@@ -76,11 +81,6 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return SecretStr(v)
         return v
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
 
     @property
     def database_url(self) -> str:

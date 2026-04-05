@@ -41,11 +41,11 @@ def mock_user_id() -> str:
 @pytest.fixture
 def mock_event_data() -> dict:
     """模拟事件数据"""
-    from datetime import datetime
+    from datetime import datetime, timezone
     return {
         "user_id": "user_001",
         "event_type": "view",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "page_url": "/home",
         "properties": {"stay_duration": 30},
     }

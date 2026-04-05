@@ -3,7 +3,7 @@ BehaviorSense Audit Service
 人工审核服务
 """
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 import redis.asyncio as redis
 from behavior_core.config.settings import get_settings
@@ -106,7 +106,7 @@ def create_app() -> FastAPI:
         return {
             "status": "healthy",
             "service": "behavior_audit",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "version": "1.0.0",
         }
 

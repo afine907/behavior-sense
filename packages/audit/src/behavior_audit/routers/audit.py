@@ -6,7 +6,7 @@ from typing import Any
 
 from behavior_core.utils.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from behavior_audit.repositories.audit_repo import (
@@ -55,6 +55,8 @@ class BatchAssignRequest(BaseModel):
 
 class OrderResponse(BaseModel):
     """工单响应"""
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     rule_id: str
@@ -65,9 +67,6 @@ class OrderResponse(BaseModel):
     reviewer_note: str | None
     create_time: datetime
     update_time: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class OrderListResponse(BaseModel):

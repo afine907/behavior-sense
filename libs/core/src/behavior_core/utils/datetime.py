@@ -1,20 +1,20 @@
 """
 时间处理工具
 """
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 
 def utc_now() -> datetime:
     """获取当前 UTC 时间"""
-    return datetime.utcnow().replace(tzinfo=UTC)
+    return datetime.now(timezone.utc)
 
 
 def to_utc(dt: datetime) -> datetime:
     """转换为 UTC 时间"""
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=UTC)
-    return dt.astimezone(UTC)
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def to_timestamp(dt: datetime) -> int:
@@ -24,7 +24,7 @@ def to_timestamp(dt: datetime) -> int:
 
 def from_timestamp(ts: int) -> datetime:
     """从毫秒时间戳转换"""
-    return datetime.fromtimestamp(ts / 1000, tz=UTC)
+    return datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
 
 
 def format_iso(dt: datetime) -> str:
@@ -45,7 +45,7 @@ def get_window_start(
     timestamp = dt.timestamp()
     window_seconds = window_size.total_seconds()
     window_start = (timestamp // window_seconds) * window_seconds
-    return datetime.fromtimestamp(window_start, tz=dt.tzinfo or UTC)
+    return datetime.fromtimestamp(window_start, tz=dt.tzinfo or timezone.utc)
 
 
 def get_window_end(

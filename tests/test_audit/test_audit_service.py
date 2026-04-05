@@ -2,7 +2,7 @@
 behavior_audit 模块单元测试
 """
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Any
 from enum import Enum
@@ -62,7 +62,7 @@ class MockAuditRepository:
         return self.orders.get(order_id)
 
     async def update(self, order: AuditOrder) -> AuditOrder:
-        order.update_time = datetime.utcnow()
+        order.update_time = datetime.now(timezone.utc)
         self.orders[order.id] = order
         return order
 

@@ -142,3 +142,6 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# playwright-mcp
+.playwright-mcp

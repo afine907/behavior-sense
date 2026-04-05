@@ -225,20 +225,6 @@ class RuleEngine:
         if isinstance(node, ast.Constant):
             return node.value
 
-        # Python 3.7 兼容 (已在 Python 3.12 中移除)
-        try:
-            if isinstance(node, ast.Num):
-                return node.n
-            if isinstance(node, ast.Str):
-                return node.s
-            if isinstance(node, (ast.True_, ast.False_)):
-                return isinstance(node, ast.True_)
-            if isinstance(node, ast.None_):
-                return None
-        except AttributeError:
-            # Python 3.12+ 中这些类型已移除，使用 ast.Constant 替代
-            pass
-
         # 允许变量名
         if isinstance(node, ast.Name):
             if node.id in context:

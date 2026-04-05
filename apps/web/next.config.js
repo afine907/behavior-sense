@@ -3,24 +3,40 @@ const nextConfig = {
   reactStrictMode: true,
 
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return [
-      // Proxy to backend services
+      // Health check endpoints (more specific, must come first)
+      {
+        source: '/api/mock/health',
+        destination: 'http://localhost:8001/health',
+      },
+      {
+        source: '/api/rules/health',
+        destination: 'http://localhost:8002/health',
+      },
+      {
+        source: '/api/insight/health',
+        destination: 'http://localhost:8003/health',
+      },
+      {
+        source: '/api/audit/health',
+        destination: 'http://localhost:8004/health',
+      },
+      // Proxy to backend services - API endpoints (less specific, comes after)
       {
         source: '/api/mock/:path*',
-        destination: `${apiUrl.replace(':8000', ':8001')}/api/:path*`,
+        destination: 'http://localhost:8001/api/mock/:path*',
       },
       {
         source: '/api/rules/:path*',
-        destination: `${apiUrl.replace(':8000', ':8002')}/api/:path*`,
+        destination: 'http://localhost:8002/api/rules/:path*',
       },
       {
         source: '/api/insight/:path*',
-        destination: `${apiUrl.replace(':8000', ':8003')}/api/:path*`,
+        destination: 'http://localhost:8003/api/insight/:path*',
       },
       {
         source: '/api/audit/:path*',
-        destination: `${apiUrl.replace(':8000', ':8004')}/api/:path*`,
+        destination: 'http://localhost:8004/api/audit/:path*',
       },
     ];
   },

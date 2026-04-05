@@ -4,11 +4,11 @@
 定义规则引擎所需的数据模型，包括规则条件、动作和匹配结果。
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ActionType(str, Enum):
@@ -18,6 +18,11 @@ class ActionType(str, Enum):
     SEND_NOTIFICATION = "SEND_NOTIFICATION"
     BLOCK_USER = "BLOCK_USER"
     ALERT = "ALERT"
+
+
+def _utc_now() -> datetime:
+    """获取当前 UTC 时间"""
+    return datetime.now(timezone.utc)
 
 
 class RuleCondition(BaseModel):
@@ -69,15 +74,10 @@ class Rule(BaseModel):
     enabled: bool = True
     actions: list[RuleAction] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)  # 规则标签，用于分类
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
     created_by: str | None = None
     version: int = 1
-
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class RuleCreate(BaseModel):
@@ -109,14 +109,9 @@ class RuleMatchResult(BaseModel):
     matched: bool
     context: dict[str, Any] = Field(default_factory=dict)
     actions_executed: list[dict[str, Any]] = Field(default_factory=list)
-    executed_at: datetime = Field(default_factory=datetime.utcnow)
+    executed_at: datetime = Field(default_factory=_utc_now)
     execution_time_ms: float = 0.0  # 执行耗时（毫秒）
     error: str | None = None
-
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class EvaluateRequest(BaseModel):

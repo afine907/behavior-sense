@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'BehaviorSense Console',
   description: 'User Behavior Stream Analytics Engine - Admin Console',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

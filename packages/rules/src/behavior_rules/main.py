@@ -5,7 +5,7 @@ FastAPI 应用，提供规则管理 API 和规则评估接口。
 """
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from behavior_core.config.settings import settings
@@ -124,7 +124,7 @@ async def health_check() -> dict[str, Any]:
         "service": "behavior-rules",
         "rules_count": len(_rules_store),
         "handlers_count": len(engine._action_handlers),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -267,7 +267,7 @@ async def update_rule(rule_id: str, rule_update: RuleUpdate) -> Rule:
     # 创建更新后的规则
     updated_rule = existing_rule.model_copy(update={
         **update_data,
-        "updated_at": datetime.utcnow(),
+        "updated_at": datetime.now(timezone.utc),
         "version": existing_rule.version + 1
     })
 

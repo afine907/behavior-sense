@@ -7,7 +7,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -192,7 +192,7 @@ class YamlRuleLoader(BaseRuleLoader):
     def _parse_datetime(self, value: str | None) -> datetime:
         """解析日期时间"""
         if value is None:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
         if isinstance(value, datetime):
             return value
         return datetime.fromisoformat(value)
@@ -390,7 +390,7 @@ class DbRuleLoader(BaseRuleLoader):
                 rules.append(rule)
                 self._engine.register_rule(rule)
 
-            self._last_update = datetime.utcnow()
+            self._last_update = datetime.now(timezone.utc)
             logger.info(f"Loaded {len(rules)} rules from database")
             return rules
 

@@ -2,7 +2,7 @@
 用户仓库
 使用 PostgreSQL + SQLAlchemy 异步实现
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from behavior_core.models import UserProfile, UserStat
@@ -131,16 +131,16 @@ class UserRepository:
                 "stat_tags": profile.stat_tags,
                 "predict_tags": profile.predict_tags,
                 "risk_level": profile.risk_level,
-                "update_time": datetime.utcnow(),
+                "update_time": datetime.now(timezone.utc),
             }
         else:
-            update_data = {**profile, "update_time": datetime.utcnow()}
+            update_data = {**profile, "update_time": datetime.now(timezone.utc)}
 
         # 使用 PostgreSQL INSERT ... ON CONFLICT UPDATE (原子操作，避免竞态条件)
         stmt = pg_insert(UserModel).values(
             user_id=user_id,
             **update_data,
-            create_time=datetime.utcnow(),
+            create_time=datetime.now(timezone.utc),
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=['user_id'],
@@ -224,10 +224,10 @@ class UserRepository:
                 "last_event_time": stat.last_event_time,
                 "last_purchase_time": stat.last_purchase_time,
                 "last_login_time": stat.last_login_time,
-                "update_time": datetime.utcnow(),
+                "update_time": datetime.now(timezone.utc),
             }
         else:
-            update_data = {**stat, "update_time": datetime.utcnow()}
+            update_data = {**stat, "update_time": datetime.now(timezone.utc)}
 
         # 使用 PostgreSQL INSERT ... ON CONFLICT UPDATE (原子操作，避免竞态条件)
         stmt = pg_insert(UserStatModel).values(

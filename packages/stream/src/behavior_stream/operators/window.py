@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
@@ -64,7 +64,12 @@ class WindowFunction(ABC, Generic[T, R]):
 
         for window_start, window_end in windows:
             # 检查窗口是否已过期
-            if datetime.utcnow() - window_end > self.allowed_lateness:
+            # 根据window_end的时区信息选择对应的now
+            if window_end.tzinfo is not None:
+                now = datetime.now(timezone.utc)
+            else:
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
+            if now - window_end > self.allowed_lateness:
                 continue
 
             # 查找或创建窗口
@@ -107,9 +112,13 @@ class WindowFunction(ABC, Generic[T, R]):
 
     def get_expired_windows(self) -> Generator[tuple[str, WindowResult[T]], None, None]:
         """获取已过期的窗口"""
-        now = datetime.utcnow()
         for key, windows in list(self._windows.items()):
             for window in windows[:]:
+                # 根据window_end的时区信息选择对应的now
+                if window.window_end.tzinfo is not None:
+                    now = datetime.now(timezone.utc)
+                else:
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
                 if now > window.window_end + self.allowed_lateness:
                     yield key, window
                     windows.remove(window)
@@ -141,7 +150,11 @@ class TumblingWindow(WindowFunction[T, R]):
 
     def get_window_start(self, timestamp: datetime) -> datetime:
         """获取窗口起始时间"""
-        epoch = datetime(1970, 1, 1)
+        # 根据timestamp是否带时区信息选择对应的epoch
+        if timestamp.tzinfo is not None:
+            epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        else:
+            epoch = datetime(1970, 1, 1)
         total_seconds = (timestamp - epoch - self.offset).total_seconds()
         window_seconds = self.window_size.total_seconds()
         window_start_seconds = (total_seconds // window_seconds) * window_seconds
@@ -185,7 +198,11 @@ class SlidingWindow(WindowFunction[T, R]):
 
     def get_window_start(self, timestamp: datetime) -> datetime:
         """获取最近的窗口起始时间"""
-        epoch = datetime(1970, 1, 1)
+        # 根据timestamp是否带时区信息选择对应的epoch
+        if timestamp.tzinfo is not None:
+            epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        else:
+            epoch = datetime(1970, 1, 1)
         total_seconds = (timestamp - epoch - self.offset).total_seconds()
         slide_seconds = self.slide_interval.total_seconds()
         window_start_seconds = (total_seconds // slide_seconds) * slide_seconds
@@ -198,7 +215,11 @@ class SlidingWindow(WindowFunction[T, R]):
     def assign_windows(self, timestamp: datetime) -> list[tuple[datetime, datetime]]:
         """分配窗口 - 一个事件可能属于多个滑动窗口"""
         windows = []
-        epoch = datetime(1970, 1, 1)
+        # 根据timestamp是否带时区信息选择对应的epoch
+        if timestamp.tzinfo is not None:
+            epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        else:
+            epoch = datetime(1970, 1, 1)
         slide_seconds = self.slide_interval.total_seconds()
         window_seconds = self.window_size.total_seconds()
 
@@ -319,10 +340,13 @@ class SessionWindow(WindowFunction[T, R]):
         if inactive_threshold is None:
             inactive_threshold = self.timeout
 
-        now = datetime.utcnow()
-
         for key, windows in list(self._windows.items()):
             for window in windows[:]:
+                # 根据window_end的时区信息选择对应的now
+                if window.window_end.tzinfo is not None:
+                    now = datetime.now(timezone.utc)
+                else:
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
                 if now - window.window_end > inactive_threshold:
                     yield key, window
                     windows.remove(window)

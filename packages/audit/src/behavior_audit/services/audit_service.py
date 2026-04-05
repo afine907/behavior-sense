@@ -2,7 +2,7 @@
 审核服务层
 实现审核工单的业务逻辑
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -93,8 +93,8 @@ class AuditService:
             trigger_data=trigger_data,
             audit_level=level,
             status=AuditStatus.PENDING.value,
-            create_time=datetime.utcnow(),
-            update_time=datetime.utcnow(),
+            create_time=datetime.now(timezone.utc),
+            update_time=datetime.now(timezone.utc),
         )
 
         order = await self._repo.create(order)

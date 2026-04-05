@@ -9,7 +9,7 @@
 """
 import asyncio
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import orjson
@@ -422,7 +422,7 @@ async def detection_agent(events: Any) -> None:
 @app.timer(interval=600.0)  # 每10分钟
 async def cleanup_detection_state() -> None:
     """清理过期的检测状态"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # 清理登录失败记录
     cutoff = now - LOGIN_FAIL_WINDOW

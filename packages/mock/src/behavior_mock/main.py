@@ -5,7 +5,7 @@ FastAPI 应用入口
 """
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from behavior_core.config.settings import get_settings
 from behavior_core.models.event import EventType
@@ -144,7 +144,7 @@ async def health_check():
 
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         active_scenarios=active_count,
         producer_connected=producer_connected,
     )
@@ -256,7 +256,7 @@ async def start_scenario(
     - abnormal: 异常流量
     - gradual: 渐进负载
     """
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
     scenario_id = request.scenario_id or f"{request.scenario_type}-{timestamp}"
 
     # 检查是否已存在

@@ -89,7 +89,7 @@ class TestTumblingWindow:
     def test_add_event(self, window):
         """测试添加事件"""
         # 使用当前时间确保窗口未过期
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         event = {"amount": 100}
 
         results = window.add_event("user_001", event, dt)
@@ -100,7 +100,7 @@ class TestTumblingWindow:
     def test_trigger_window(self, window):
         """测试触发窗口"""
         # 使用当前时间确保窗口未过期
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         event = {"amount": 100}
 
         window.add_event("user_001", event, dt)
@@ -152,7 +152,7 @@ class TestSlidingWindow:
 
     def test_assign_windows_overlapping(self, window):
         """测试重叠窗口分配"""
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         windows = window.assign_windows(dt)
 
         # 5分钟窗口，1分钟滑动，事件可能属于多个窗口
@@ -160,7 +160,7 @@ class TestSlidingWindow:
 
     def test_add_event_to_multiple_windows(self, window):
         """测试事件添加到多个窗口"""
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         event = {"amount": 100}
 
         results = window.add_event("user_001", event, dt)
@@ -186,7 +186,7 @@ class TestSessionWindow:
         """测试新会话"""
         # 创建新的窗口实例避免测试间干扰
         window = SessionWindow(timeout=timedelta(minutes=5))
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         event = {"action": "click"}
 
         result, is_new = window.add_event_with_session("user_test_new", event, dt)
@@ -196,7 +196,7 @@ class TestSessionWindow:
 
     def test_continue_session(self, window):
         """测试继续会话"""
-        base = datetime.utcnow()
+        base = datetime.now(timezone.utc)
         dt1 = base
         dt2 = base + timedelta(minutes=2)
 
@@ -212,7 +212,7 @@ class TestSessionWindow:
 
     def test_session_timeout(self, window):
         """测试会话超时"""
-        base = datetime.utcnow()
+        base = datetime.now(timezone.utc)
         dt1 = base
         dt2 = base + timedelta(minutes=10)
 
@@ -232,7 +232,7 @@ class TestSessionWindow:
             max_session_length=timedelta(minutes=10),
         )
 
-        base = datetime.utcnow()
+        base = datetime.now(timezone.utc)
         dt1 = base
         dt2 = base + timedelta(minutes=8)  # 8 分钟后
 
@@ -247,7 +247,7 @@ class TestSessionWindow:
 
     def test_close_session(self, window):
         """测试关闭会话"""
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         event = {"action": "click"}
 
         window.add_event_with_session("user_close", event, dt)
@@ -268,7 +268,7 @@ class TestTumblingWindowAdvanced:
         )
 
         # 先添加一个当前事件
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         event = {"amount": 100}
         window.add_event("user_001", event, dt)
 
@@ -276,7 +276,7 @@ class TestTumblingWindowAdvanced:
         # 将窗口结束时间设为过去
         for key, windows in window._windows.items():
             for w in windows:
-                w.window_end = datetime.utcnow() - timedelta(hours=1)
+                w.window_end = datetime.now(timezone.utc) - timedelta(hours=1)
 
         # 清理过期窗口
         cleaned = window.cleanup()
@@ -290,7 +290,7 @@ class TestTumblingWindowAdvanced:
         )
 
         # 添加一个明显过期的事件（窗口结束时间在过去）
-        dt = datetime.utcnow() - timedelta(hours=2)
+        dt = datetime.now(timezone.utc) - timedelta(hours=2)
         event = {"amount": 100}
         results = window.add_event("user_001", event, dt)
 
@@ -305,7 +305,7 @@ class TestTumblingWindowAdvanced:
         )
 
         # 添加一个迟到但在允许范围内的事件
-        dt = datetime.utcnow() - timedelta(minutes=10)
+        dt = datetime.now(timezone.utc) - timedelta(minutes=10)
         event = {"amount": 100}
         results = window.add_event("user_001", event, dt)
 
@@ -321,14 +321,14 @@ class TestSessionWindowAdvanced:
         window = SessionWindow(timeout=timedelta(minutes=5))
 
         # 创建一个会话
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
         event = {"action": "click"}
         window.add_event_with_session("user_inactive", event, dt)
 
         # 手动设置窗口结束时间为过去
         for key, windows in window._windows.items():
             for w in windows:
-                w.window_end = datetime.utcnow() - timedelta(minutes=10)
+                w.window_end = datetime.now(timezone.utc) - timedelta(minutes=10)
 
         # 获取不活跃会话
         inactive = list(window.get_inactive_sessions())

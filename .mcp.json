@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    },
     "postgres": {
       "command": "npx",
       "args": ["@modelcontextprotocol/server-postgres"],

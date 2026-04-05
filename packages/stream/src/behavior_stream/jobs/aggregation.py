@@ -8,7 +8,7 @@
 - 输出到 aggregation-result topic
 """
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import orjson
@@ -121,7 +121,7 @@ async def emit_aggregation_result(
 
 async def flush_expired_windows() -> None:
     """刷新过期的窗口，发送聚合结果"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expired_keys = []
 
     for window_key, data in current_window_data.items():
@@ -153,7 +153,7 @@ async def aggregate_global_stats() -> dict[str, Any]:
             stats.get("total_events", 0)
             for stats in user_stats_table.values()
         ),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return global_stats
 
