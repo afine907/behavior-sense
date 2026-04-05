@@ -595,7 +595,6 @@ source = { editable = "packages/stream" }
 dependencies = [
     { name = "behavior-core" },
     { name = "clickhouse-connect" },
-    { name = "faust-streaming" },
     { name = "pulsar-client" },
     { name = "redis" },
 ]
@@ -604,7 +603,6 @@ dependencies = [
 requires-dist = [
     { name = "behavior-core", editable = "libs/core" },
     { name = "clickhouse-connect", specifier = ">=0.6.0" },
-    { name = "faust-streaming", specifier = ">=0.11.0" },
     { name = "pulsar-client", specifier = ">=3.4.0" },
     { name = "redis", extras = ["asyncio"], specifier = ">=5.0.0" },
 ]

@@ -26,6 +26,11 @@ logger = get_logger(__name__)
 Base = declarative_base()
 
 
+def utcnow_naive() -> datetime:
+    """返回无时区信息的 UTC 时间（用于数据库存储）"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 class UserModel(Base):
     """用户数据表模型"""
     __tablename__ = "users"
@@ -36,8 +41,8 @@ class UserModel(Base):
     stat_tags = Column(JSON, default=dict)
     predict_tags = Column(JSON, default=dict)
     risk_level = Column(String(32), default="low")
-    create_time = Column(DateTime, default=datetime.utcnow)
-    update_time = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    create_time = Column(DateTime, default=utcnow_naive)
+    update_time = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
 
 class UserStatModel(Base):
@@ -66,7 +71,7 @@ class UserStatModel(Base):
     last_purchase_time = Column(DateTime, nullable=True)
     last_login_time = Column(DateTime, nullable=True)
 
-    update_time = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
 
 class UserRepository:
@@ -131,16 +136,16 @@ class UserRepository:
                 "stat_tags": profile.stat_tags,
                 "predict_tags": profile.predict_tags,
                 "risk_level": profile.risk_level,
-                "update_time": datetime.now(timezone.utc),
+                "update_time": utcnow_naive(),
             }
         else:
-            update_data = {**profile, "update_time": datetime.now(timezone.utc)}
+            update_data = {**profile, "update_time": utcnow_naive()}
 
         # 使用 PostgreSQL INSERT ... ON CONFLICT UPDATE (原子操作，避免竞态条件)
         stmt = pg_insert(UserModel).values(
             user_id=user_id,
             **update_data,
-            create_time=datetime.now(timezone.utc),
+            create_time=utcnow_naive(),
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=['user_id'],
@@ -224,10 +229,10 @@ class UserRepository:
                 "last_event_time": stat.last_event_time,
                 "last_purchase_time": stat.last_purchase_time,
                 "last_login_time": stat.last_login_time,
-                "update_time": datetime.now(timezone.utc),
+                "update_time": utcnow_naive(),
             }
         else:
-            update_data = {**stat, "update_time": datetime.now(timezone.utc)}
+            update_data = {**stat, "update_time": utcnow_naive()}
 
         # 使用 PostgreSQL INSERT ... ON CONFLICT UPDATE (原子操作，避免竞态条件)
         stmt = pg_insert(UserStatModel).values(

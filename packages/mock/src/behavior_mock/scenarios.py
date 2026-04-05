@@ -88,7 +88,9 @@ class Scenario(ABC):
             return
 
         self._status = ScenarioStatus.RUNNING
-        self._start_time = datetime.now(timezone.utc)
+        # 只在第一次启动时设置开始时间
+        if self._start_time is None:
+            self._start_time = datetime.now(timezone.utc)
         self._stop_event.clear()
         logger.info("scenario_started", scenario_id=self.scenario_id)
 
@@ -160,15 +162,19 @@ class NormalScenario(Scenario):
     async def stream(self) -> AsyncIterator[UserBehavior]:
         """流式生成事件"""
         interval = 1.0 / self.rate_per_second
-        self.start()
+        # 注意：start() 应该在调用 stream() 之前被调用
+        # 如果状态不是 RUNNING，尝试启动
+        if self._status != ScenarioStatus.RUNNING:
+            self.start()
 
         try:
             while self._should_continue():
                 yield self.generator.generate()
                 await asyncio.sleep(interval)
         finally:
-            if self._status == ScenarioStatus.RUNNING:
-                self._status = ScenarioStatus.COMPLETED
+            # 只有在仍在运行状态时才标记为完成
+            # 这允许外部控制停止场景而不自动变为完成
+            pass
 
 
 class FlashSaleScenario(Scenario):
@@ -230,7 +236,8 @@ class FlashSaleScenario(Scenario):
 
     async def stream(self) -> AsyncIterator[UserBehavior]:
         """流式生成事件"""
-        self.start()
+        if self._status != ScenarioStatus.RUNNING:
+            self.start()
 
         try:
             while self._should_continue():
@@ -246,8 +253,7 @@ class FlashSaleScenario(Scenario):
                 yield event
                 await asyncio.sleep(interval)
         finally:
-            if self._status == ScenarioStatus.RUNNING:
-                self._status = ScenarioStatus.COMPLETED
+            pass
 
 
 class AbnormalTrafficScenario(Scenario):
@@ -334,7 +340,8 @@ class AbnormalTrafficScenario(Scenario):
     async def stream(self) -> AsyncIterator[UserBehavior]:
         """流式生成事件"""
         interval = 1.0 / self.rate_per_second
-        self.start()
+        if self._status != ScenarioStatus.RUNNING:
+            self.start()
 
         try:
             while self._should_continue():
@@ -350,8 +357,7 @@ class AbnormalTrafficScenario(Scenario):
                 yield event
                 await asyncio.sleep(interval)
         finally:
-            if self._status == ScenarioStatus.RUNNING:
-                self._status = ScenarioStatus.COMPLETED
+            pass
 
 
 class GradualLoadScenario(Scenario):
@@ -391,7 +397,8 @@ class GradualLoadScenario(Scenario):
 
     async def stream(self) -> AsyncIterator[UserBehavior]:
         """流式生成事件"""
-        self.start()
+        if self._status != ScenarioStatus.RUNNING:
+            self.start()
 
         try:
             while self._should_continue():
@@ -401,8 +408,7 @@ class GradualLoadScenario(Scenario):
                 yield self.generator.generate()
                 await asyncio.sleep(interval)
         finally:
-            if self._status == ScenarioStatus.RUNNING:
-                self._status = ScenarioStatus.COMPLETED
+            pass
 
 
 # 场景工厂

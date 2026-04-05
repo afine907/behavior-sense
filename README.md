@@ -132,13 +132,32 @@ uv run uvicorn behavior_audit.main:app --port 8004
 
 ### Running Tests
 
+The project uses a **dual-mode testing architecture** for fast iteration and production verification:
+
 ```bash
-# Run all tests
-uv run pytest tests/
+# Mock mode (fast, no external dependencies)
+uv run pytest tests/test_api/test_mock_api.py tests/test_api/test_rules_api.py tests/test_integration/test_basic_integration.py -v
+
+# Real dependencies mode (requires Docker)
+docker-compose -f docker-compose.test.yml up -d
+TEST_REAL_DEPS=1 uv run pytest tests/ -v
+docker-compose -f docker-compose.test.yml down -v
 
 # Run with coverage
 uv run pytest tests/ --cov=libs --cov=packages --cov-report=html
+
+# Using the test script
+./scripts/run_tests.sh           # Mock mode
+./scripts/run_tests.sh --real    # Real dependencies
+./scripts/run_tests.sh --all     # All tests
 ```
+
+| Mode | Dependencies | Use Case |
+|------|--------------|----------|
+| Mock | None | Fast iteration, local development |
+| Real | Redis + PostgreSQL | CI verification, pre-production check |
+
+For detailed test documentation, see [tests/test_api/TEST_REPORT.md](tests/test_api/TEST_REPORT.md).
 
 ## Service Ports
 

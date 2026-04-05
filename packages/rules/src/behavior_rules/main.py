@@ -220,6 +220,41 @@ async def create_rule(rule_create: RuleCreate) -> Rule:
     return rule
 
 
+# ==================== 统计 API（必须在 /{rule_id} 之前定义）====================
+
+@app.get("/api/rules/stats", tags=["Statistics"])
+async def get_rules_stats() -> dict[str, Any]:
+    """
+    获取规则统计信息
+
+    Returns:
+        统计信息
+    """
+    rules = list(_rules_store.values())
+
+    enabled_count = sum(1 for r in rules if r.enabled)
+    disabled_count = len(rules) - enabled_count
+
+    # 按标签统计
+    tag_counts: dict[str, int] = {}
+    for rule in rules:
+        for tag in rule.tags:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    # 按优先级统计
+    priority_counts: dict[int, int] = {}
+    for rule in rules:
+        priority_counts[rule.priority] = priority_counts.get(rule.priority, 0) + 1
+
+    return {
+        "total_rules": len(rules),
+        "enabled_rules": enabled_count,
+        "disabled_rules": disabled_count,
+        "tags": tag_counts,
+        "priority_distribution": priority_counts
+    }
+
+
 @app.get("/api/rules/{rule_id}", response_model=Rule, tags=["Rules"])
 async def get_rule(rule_id: str) -> Rule:
     """
@@ -415,41 +450,6 @@ async def validate_rule(rule_create: RuleCreate) -> dict[str, Any]:
             "condition": rule_create.condition,
             "error": str(e)
         }
-
-
-# ==================== 统计 API ====================
-
-@app.get("/api/rules/stats", tags=["Statistics"])
-async def get_rules_stats() -> dict[str, Any]:
-    """
-    获取规则统计信息
-
-    Returns:
-        统计信息
-    """
-    rules = list(_rules_store.values())
-
-    enabled_count = sum(1 for r in rules if r.enabled)
-    disabled_count = len(rules) - enabled_count
-
-    # 按标签统计
-    tag_counts: dict[str, int] = {}
-    for rule in rules:
-        for tag in rule.tags:
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
-
-    # 按优先级统计
-    priority_counts: dict[int, int] = {}
-    for rule in rules:
-        priority_counts[rule.priority] = priority_counts.get(rule.priority, 0) + 1
-
-    return {
-        "total_rules": len(rules),
-        "enabled_rules": enabled_count,
-        "disabled_rules": disabled_count,
-        "tags": tag_counts,
-        "priority_distribution": priority_counts
-    }
 
 
 # ==================== 入口 ====================

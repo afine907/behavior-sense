@@ -18,6 +18,7 @@ services:
   # ===== 数据库 =====
   postgres:
     image: postgres:15-alpine
+    platform: linux/amd64
     container_name: behavior-postgres
     ports:
       - "5432:5432"
@@ -33,11 +34,11 @@ services:
   # ===== 缓存 =====
   redis:
     image: redis:7-alpine
+    platform: linux/amd64
     container_name: behavior-redis
     ports:
       - "6379:6379"
-    volumes:
-      - redis-data:/data
+    # 不使用 volume 避免挂载问题
     networks:
       - behavior-net
 

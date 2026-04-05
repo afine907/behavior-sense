@@ -16,6 +16,11 @@ from sqlmodel import Field, SQLModel
 logger = get_logger(__name__)
 
 
+def utcnow_naive() -> datetime:
+    """返回无时区信息的 UTC 时间（用于数据库存储）"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 class AuditStatus(str, Enum):
     """审核状态枚举"""
     PENDING = "pending"
@@ -44,8 +49,8 @@ class AuditOrder(SQLModel, table=True):
     status: str = Field(default=AuditStatus.PENDING.value, index=True)
     assignee: str | None = Field(default=None, index=True)
     reviewer_note: str | None = Field(default=None)
-    create_time: datetime = Field(default_factory=datetime.utcnow)
-    update_time: datetime = Field(default_factory=datetime.utcnow)
+    create_time: datetime = Field(default_factory=utcnow_naive)
+    update_time: datetime = Field(default_factory=utcnow_naive)
 
 
 class AuditOrderCreate(SQLModel):
@@ -85,7 +90,7 @@ class AuditRepository:
 
     async def update(self, order: AuditOrder) -> AuditOrder:
         """更新工单"""
-        order.update_time = datetime.now(timezone.utc)
+        order.update_time = utcnow_naive()
         self._session.add(order)
         await self._session.commit()
         await self._session.refresh(order)
@@ -206,7 +211,7 @@ class AuditRepository:
             level_counts[row.audit_level] = row.count
 
         # 今日新增（可与上述查询合并，但为代码清晰保持独立）
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = utcnow_naive().replace(hour=0, minute=0, second=0, microsecond=0)
         today_stmt = select(func.count(AuditOrder.id)).where(
             AuditOrder.create_time >= today
         )

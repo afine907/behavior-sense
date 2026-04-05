@@ -93,8 +93,6 @@ class AuditService:
             trigger_data=trigger_data,
             audit_level=level,
             status=AuditStatus.PENDING.value,
-            create_time=datetime.now(timezone.utc),
-            update_time=datetime.now(timezone.utc),
         )
 
         order = await self._repo.create(order)

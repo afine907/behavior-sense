@@ -33,13 +33,38 @@ jobs:
         uv run mypy libs/core/src/behavior_core --ignore-missing-imports
         uv run mypy packages/*/src --ignore-missing-imports
 
-  test:
+  # 快速测试：无外部依赖，用于快速反馈
+  test-mock:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Run mock tests (no external deps)
+      run: |
+        uv run pytest tests/test_api/test_mock_api.py tests/test_api/test_rules_api.py tests/test_integration/test_basic_integration.py -v
+
+  # 完整测试：使用真实依赖
+  test-integration:
     runs-on: ubuntu-latest
 
     services:
       postgres:
         image: postgres:15
         env:
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: behavior_sense
         ports:
@@ -76,9 +101,10 @@ jobs:
     - name: Install dependencies
       run: uv sync
 
-    - name: Run tests
-      run: uv run pytest tests/ --cov=libs --cov=packages --cov-report=xml --cov-report=html
+    - name: Run integration tests with real dependencies
+      run: uv run pytest tests/ --cov=libs --cov=packages --cov-report=xml --cov-report=html -v
       env:
+        TEST_REAL_DEPS: "1"
         POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432
         POSTGRES_USER: postgres
@@ -92,7 +118,7 @@ jobs:
         file: ./coverage.xml
 
   build:
-    needs: [lint, test]
+    needs: [lint, test-mock, test-integration]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 

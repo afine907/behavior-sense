@@ -30,6 +30,9 @@ class TagStatisticsResponse(BaseModel):
 
 def get_user_repo(request: Request) -> UserRepository:
     """获取用户仓库依赖"""
+    # 优先使用 request.state（由 middleware 设置），否则回退到 app.state
+    if hasattr(request.state, "user_repo"):
+        return request.state.user_repo
     return request.app.state.user_repo
 
 

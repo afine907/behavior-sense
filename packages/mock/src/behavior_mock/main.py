@@ -29,6 +29,11 @@ _scenario_registry: dict[str, Scenario] = {}
 _producer: PulsarProducer | MockProducer | None = None
 
 
+def _utcnow() -> datetime:
+    """返回 UTC 时间（无时区信息，用于数据库存储）"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 # 请求/响应模型
 class GenerateRequest(BaseModel):
     """生成事件请求"""
@@ -43,7 +48,7 @@ class GenerateResponse(BaseModel):
     """生成事件响应"""
     events: list[dict]
     count: int
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=_utcnow)
 
 
 class ScenarioStartRequest(BaseModel):
@@ -310,7 +315,10 @@ async def start_scenario(
     # 注册场景
     _scenario_registry[scenario_id] = scenario
 
-    # 后台运行场景
+    # 显式启动场景（确保状态立即变为 RUNNING）
+    scenario.start()
+
+    # 后台运行场景（使用 asyncio.create_task 而不是 BackgroundTasks）
     async def run_scenario():
         producer = get_producer()
         try:
@@ -325,7 +333,8 @@ async def start_scenario(
             logger.error("scenario_error", scenario_id=scenario_id, error=str(e))
             scenario._status = ScenarioStatus.ERROR
 
-    background_tasks.add_task(run_scenario)
+    # 使用 asyncio.create_task 在后台运行，不阻塞响应
+    asyncio.create_task(run_scenario())
 
     logger.info(
         "scenario_started",

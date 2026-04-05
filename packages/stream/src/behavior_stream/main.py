@@ -1,54 +1,107 @@
 """
-behavior_stream 入口
+BehaviorSense Stream Processor
 
-启动 Faust worker，注册所有任务。
+使用 pulsar-client 消费事件，进行实时聚合和模式检测。
 """
+import asyncio
+import signal
+from datetime import datetime, timezone
 
+import pulsar
 from behavior_core.config.settings import get_settings
+from behavior_core.utils.logging import get_logger, setup_logging
 
-from behavior_stream.app import app
+from behavior_stream.consumer import StreamConsumer
+from behavior_stream.processor import StreamProcessor
 
 settings = get_settings()
+logger = get_logger(__name__)
+
+# 全局状态
+_running = False
+_consumer: StreamConsumer | None = None
+_processor: StreamProcessor | None = None
 
 
 async def startup() -> None:
     """应用启动时的初始化"""
+    global _consumer, _processor, _running
+
     print("=" * 60)
     print("BehaviorSense Stream Processor")
     print("=" * 60)
     print(f"Pulsar URL: {settings.pulsar_url}")
-    print(f"Pulsar Topic Base: {settings.pulsar_topic_base}")
-    print(f"App ID: {app.id}")
+    print(f"Pulsar Topic: {settings.pulsar_topic('user-behavior')}")
     print("=" * 60)
+
+    # 创建处理器
+    _processor = StreamProcessor()
+
+    # 创建消费者
+    _consumer = StreamConsumer(
+        pulsar_url=settings.pulsar_url,
+        topic=settings.pulsar_topic("user-behavior"),
+        subscription="stream-processor",
+        processor=_processor,
+    )
+
+    # 启动消费者
+    await _consumer.start()
+
+    _running = True
+    logger.info("Stream processor started")
 
 
 async def shutdown() -> None:
     """应用关闭时的清理"""
-    print("Shutting down stream processor...")
+    global _running
+
+    logger.info("Shutting down stream processor...")
+    _running = False
+
+    if _consumer:
+        await _consumer.stop()
+
+    logger.info("Stream processor stopped")
+
+
+async def run_forever() -> None:
+    """主循环"""
+    await startup()
+
+    try:
+        while _running:
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await shutdown()
 
 
 def main() -> None:
-    """
-    主入口
+    """主入口"""
+    setup_logging()
 
-    启动 Faust worker。
-    """
-    import faust
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
-    # 注册启动和关闭钩子
-    app.on_startup.connect(lambda *_: startup())
-    app.on_shutdown.connect(lambda *_: shutdown())
+    # 信号处理
+    def signal_handler():
+        logger.info("Received shutdown signal")
+        global _running
+        _running = False
 
-    # 启动 worker
-    # 使用命令行参数或默认配置
-    worker = faust.Worker(
-        app,
-        loglevel="INFO",
-        logfile=None,  # 输出到控制台
-    )
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, signal_handler)
+        except NotImplementedError:
+            # Windows 不支持 add_signal_handler
+            pass
 
-    # 运行 worker
-    worker.execute_from_commandline()
+    try:
+        loop.run_until_complete(run_forever())
+    finally:
+        loop.close()
 
 
 if __name__ == "__main__":
