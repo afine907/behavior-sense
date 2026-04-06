@@ -50,14 +50,17 @@ BehaviorSense is a real-time user behavior stream analytics engine designed for 
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| Language | Python 3.11+ | Runtime |
-| Package Manager | [uv](https://docs.astral.sh/uv/) | Dependency management |
+| Language | Python 3.11+ | Backend runtime |
+| Package Manager | [uv](https://docs.astral.sh/uv/) | Python dependency management |
 | Web Framework | FastAPI | REST API services |
+| Frontend | Next.js 14 | Web application |
 | Stream Processing | Faust | Real-time event processing |
 | Message Queue | Apache Pulsar | Event streaming |
 | Database | PostgreSQL | Persistent storage |
 | Cache | Redis | Caching & pub/sub |
 | Analytics | ClickHouse | OLAP queries |
+| Search | Elasticsearch | Full-text search |
+| Monitoring | Prometheus + Grafana | Metrics & visualization |
 
 ## Project Structure
 
@@ -67,9 +70,10 @@ behavior-sense/
 │   └── core/                 # behavior-core
 │       └── src/behavior_core/
 │           ├── config/       # Configuration management
+│           ├── metrics/      # Prometheus metrics
+│           ├── middleware/   # Rate limiting, tracing
 │           ├── models/       # Data models
 │           ├── security/     # Auth & JWT
-│           ├── middleware/   # Rate limiting, tracing
 │           └── utils/        # Utilities
 │
 ├── packages/                 # Microservices
@@ -80,12 +84,28 @@ behavior-sense/
 │   └── stream/               # behavior-stream (Faust)
 │
 ├── apps/                     # Frontend applications
-│   └── web/                  # Next.js app (reserved)
+│   └── web/                  # Next.js web app (port 5143)
+│       └── src/
+│           ├── app/          # Next.js app router
+│           ├── components/   # React components
+│           ├── lib/          # Utilities & API clients
+│           └── types/        # TypeScript types
 │
 ├── infrastructure/           # Infrastructure configs
 │   └── docker/               # Dockerfile, docker-compose
 │
 ├── tests/                    # Test suites
+│   ├── test_api/             # API tests
+│   ├── test_core/            # Core library tests
+│   ├── test_integration/     # Integration tests
+│   ├── test_mock/            # Mock service tests
+│   ├── test_rules/           # Rules engine tests
+│   ├── test_stream/          # Stream processor tests
+│   ├── test_insight/         # Insight service tests
+│   ├── test_audit/           # Audit service tests
+│   └── performance/          # Locust performance tests
+│
+├── scripts/                  # Development scripts
 └── wiki/                     # Documentation
 ```
 
@@ -167,10 +187,14 @@ For detailed test documentation, see [tests/test_api/TEST_REPORT.md](tests/test_
 | behavior-rules | 8002 | Rule engine API |
 | behavior-insight | 8003 | User insight API |
 | behavior-audit | 8004 | Audit workflow API |
+| web | 5143 | Frontend web application |
 | Pulsar | 6650 | Message queue |
 | PostgreSQL | 5432 | Database |
 | Redis | 6379 | Cache |
 | ClickHouse | 8123 | Analytics |
+| Elasticsearch | 9200 | Search engine |
+| Prometheus | 9090 | Metrics collection |
+| Grafana | 3000 | Monitoring dashboard |
 
 ## API Documentation
 
@@ -180,6 +204,7 @@ Each service provides OpenAPI documentation:
 - Rules: http://localhost:8002/docs
 - Insight: http://localhost:8003/docs
 - Audit: http://localhost:8004/docs
+- Web: http://localhost:5143
 
 ## Development
 

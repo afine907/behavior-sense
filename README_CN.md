@@ -50,14 +50,17 @@ BehaviorSense 是一个用户行为流实时分析引擎，专为低延迟（< 1
 
 | 组件 | 技术 | 用途 |
 |------|------|------|
-| 编程语言 | Python 3.11+ | 运行时 |
-| 包管理器 | [uv](https://docs.astral.sh/uv/) | 依赖管理 |
+| 编程语言 | Python 3.11+ | 后端运行时 |
+| 包管理器 | [uv](https://docs.astral.sh/uv/) | Python 依赖管理 |
 | Web 框架 | FastAPI | REST API 服务 |
+| 前端框架 | Next.js 14 | Web 应用 |
 | 流处理 | Faust | 实时事件处理 |
 | 消息队列 | Apache Pulsar | 事件流 |
 | 数据库 | PostgreSQL | 持久化存储 |
 | 缓存 | Redis | 缓存与发布订阅 |
 | 分析 | ClickHouse | OLAP 查询 |
+| 搜索 | Elasticsearch | 全文搜索 |
+| 监控 | Prometheus + Grafana | 指标采集与可视化 |
 
 ## 项目结构
 
@@ -67,9 +70,10 @@ behavior-sense/
 │   └── core/                 # behavior-core
 │       └── src/behavior_core/
 │           ├── config/       # 配置管理
+│           ├── metrics/      # Prometheus 指标
+│           ├── middleware/   # 限流、链路追踪
 │           ├── models/       # 数据模型
 │           ├── security/     # 认证与 JWT
-│           ├── middleware/   # 限流、链路追踪
 │           └── utils/        # 工具函数
 │
 ├── packages/                 # 微服务
@@ -80,12 +84,28 @@ behavior-sense/
 │   └── stream/               # behavior-stream (Faust)
 │
 ├── apps/                     # 前端应用
-│   └── web/                  # Next.js 应用（预留）
+│   └── web/                  # Next.js Web 应用 (端口 5143)
+│       └── src/
+│           ├── app/          # Next.js 应用路由
+│           ├── components/   # React 组件
+│           ├── lib/          # 工具函数与 API 客户端
+│           └── types/        # TypeScript 类型定义
 │
 ├── infrastructure/           # 基础设施配置
 │   └── docker/               # Dockerfile、docker-compose
 │
 ├── tests/                    # 测试套件
+│   ├── test_api/             # API 测试
+│   ├── test_core/            # 核心库测试
+│   ├── test_integration/     # 集成测试
+│   ├── test_mock/            # Mock 服务测试
+│   ├── test_rules/           # 规则引擎测试
+│   ├── test_stream/          # 流处理器测试
+│   ├── test_insight/         # Insight 服务测试
+│   ├── test_audit/           # Audit 服务测试
+│   └── performance/          # Locust 性能测试
+│
+├── scripts/                  # 开发脚本
 └── wiki/                     # 项目文档
 ```
 
@@ -167,10 +187,14 @@ uv run pytest tests/ --cov=libs --cov=packages --cov-report=html
 | behavior-rules | 8002 | 规则引擎 API |
 | behavior-insight | 8003 | 用户洞察 API |
 | behavior-audit | 8004 | 审核工作流 API |
+| web | 5143 | 前端 Web 应用 |
 | Pulsar | 6650 | 消息队列 |
 | PostgreSQL | 5432 | 数据库 |
 | Redis | 6379 | 缓存 |
 | ClickHouse | 8123 | 分析引擎 |
+| Elasticsearch | 9200 | 搜索引擎 |
+| Prometheus | 9090 | 指标采集 |
+| Grafana | 3000 | 监控面板 |
 
 ## API 文档
 
@@ -180,6 +204,7 @@ uv run pytest tests/ --cov=libs --cov=packages --cov-report=html
 - Rules: http://localhost:8002/docs
 - Insight: http://localhost:8003/docs
 - Audit: http://localhost:8004/docs
+- Web: http://localhost:5143
 
 ## 开发指南
 
