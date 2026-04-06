@@ -26,25 +26,161 @@ BehaviorSense 是一个用户行为流实时分析引擎，专为低延迟（< 1
 
 ### 系统架构
 
+```mermaid
+flowchart TB
+    subgraph DataIngestion["📡 数据入口层"]
+        direction LR
+        subgraph MockService["Mock 服务 :8001"]
+            Generator["🎲 事件生成器\nBehaviorGenerator"]
+            Scenarios["🎬 场景模拟\n正常流量/秒杀/异常/渐进"]
+            Producer["📤 Pulsar 生产者"]
+        end
+        ExternalData["🌐 外部数据源"]
+    end
+
+    subgraph StreamProcessing["⚡ 流处理层"]
+        subgraph Pulsar["Apache Pulsar :6650"]
+            TopicEvents["📥 events Topic"]
+            TopicAlerts["📤 alerts Topic"]
+            TopicAgg["📊 aggregation Topic"]
+        end
+        subgraph StreamService["Stream 处理器"]
+            Consumer["📥 事件消费者"]
+            subgraph Aggregator["📐 聚合器"]
+                WindowAgg["分钟窗口聚合"]
+                UserStats["用户统计"]
+            end
+            subgraph Detector["🔍 检测器"]
+                LoginFail["登录失败检测\n>5次/10分钟"]
+                HighFreq["高频操作检测\n>100次/分钟"]
+                RapidClick["快速点击检测\n>20次/10秒"]
+                UnusualPurchase["异常购买检测\n>5次/小时"]
+            end
+            AlertSender["🚨 告警发送"]
+        end
+    end
+
+    subgraph RuleEngine["🎯 规则引擎层 :8002"]
+        subgraph RulesService["Rules 服务"]
+            RuleCRUD["📋 规则管理\nCRUD API"]
+            RuleLoader["📂 规则加载器\nYAML/DB"]
+            subgraph Engine["⚙️ 规则引擎"]
+                ASTParser["AST 解析器"]
+                ConditionMatch["条件匹配"]
+                PrioritySort["优先级排序"]
+            end
+            subgraph Actions["🎬 动作处理器"]
+                TagAction["TAG_USER\n打标签"]
+                AuditAction["TRIGGER_AUDIT\n触发审核"]
+            end
+        end
+    end
+
+    subgraph InsightLayer["📊 洞察分析层 :8003"]
+        subgraph InsightService["Insight 服务"]
+            TagService["🏷️ 标签服务"]
+            UserProfile["👤 用户画像"]
+            TagStats["📈 标签统计"]
+        end
+        Redis[("Redis\n:6379")]
+        ClickHouse[("ClickHouse\n:8123")]
+    end
+
+    subgraph AuditLayer["✅ 人工审核层 :8004"]
+        subgraph AuditService["Audit 服务"]
+            OrderMgmt["📋 工单管理\n创建/查询/分配"]
+            ReviewWorkflow["📝 审核流程\npending→in_review→approved/rejected"]
+            AuditStats["📊 审核统计"]
+        end
+        PostgreSQL[("PostgreSQL\n:5432")]
+    end
+
+    subgraph Frontend["🖥️ 前端展示层 :5143"]
+        NextJS["Next.js Web App"]
+        subgraph Pages["页面"]
+            Dashboard["Dashboard\n监控大盘"]
+            RulesPage["Rules\n规则管理"]
+            InsightPage["Insight\n用户洞察"]
+            AuditPage["Audit\n审核中心"]
+            MockPage["Mock\n事件模拟"]
+        end
+    end
+
+    %% 数据流连接
+    Generator --> Producer
+    Scenarios --> Producer
+    Producer --> TopicEvents
+    ExternalData --> TopicEvents
+
+    TopicEvents --> Consumer
+    Consumer --> Aggregator
+    Consumer --> Detector
+
+    Aggregator --> WindowAgg
+    WindowAgg --> UserStats
+    UserStats --> TopicAgg
+
+    Detector --> LoginFail
+    Detector --> HighFreq
+    Detector --> RapidClick
+    Detector --> UnusualPurchase
+    LoginFail --> AlertSender
+    HighFreq --> AlertSender
+    RapidClick --> AlertSender
+    UnusualPurchase --> AlertSender
+    AlertSender --> TopicAlerts
+
+    TopicAlerts --> RuleCRUD
+    TopicAgg --> RuleCRUD
+    RuleLoader --> Engine
+    RuleCRUD --> Engine
+    Engine --> ASTParser
+    ASTParser --> ConditionMatch
+    ConditionMatch --> PrioritySort
+    PrioritySort --> Actions
+    Actions --> TagAction
+    Actions --> AuditAction
+
+    TagAction --> TagService
+    TagService --> Redis
+    TagService --> ClickHouse
+    TagService --> UserProfile
+    UserProfile --> TagStats
+
+    AuditAction --> OrderMgmt
+    OrderMgmt --> ReviewWorkflow
+    ReviewWorkflow --> AuditStats
+    OrderMgmt --> PostgreSQL
+
+    NextJS --> Pages
+    Dashboard --> |"实时监控"| StreamService
+    RulesPage --> |"规则管理"| RuleCRUD
+    InsightPage --> |"用户查询"| UserProfile
+    AuditPage --> |"审核操作"| OrderMgmt
+    MockPage --> |"事件生成"| Generator
+
+    %% 样式
+    classDef service fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef storage fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef detector fill:#fce4ec,stroke:#880e4f,stroke-width:1px
+    classDef action fill:#e8f5e9,stroke:#1b5e20,stroke-width:1px
+
+    class MockService,StreamService,RulesService,InsightService,AuditService service
+    class Pulsar,Redis,PostgreSQL,ClickHouse storage
+    class LoginFail,HighFreq,RapidClick,UnusualPurchase detector
+    class TagAction,AuditAction action
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                            BehaviorSense                                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌────────┐│
-│   │  Mock   │───▶│ Pulsar  │───▶│  Stream │───▶│  Rules  │───▶│ Insight││
-│   │ FastAPI │    │  Queue   │    │  Faust  │    │ Engine  │    │ FastAPI││
-│   └─────────┘    └─────────┘    └─────────┘    └─────────┘    └────────┘│
-│        │                                                        │        │
-│        │              ┌─────────────────────────────────────────┘        │
-│        │              ▼                                                  │
-│        │       ┌─────────────┐                                          │
-│        └──────▶│   Audit     │◀──────── 人工审核工作流                   │
-│                │   FastAPI   │                                          │
-│                └─────────────┘                                          │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+
+#### 数据流说明
+
+| 阶段 | 组件 | 功能 |
+|------|------|------|
+| **入口** | Mock/External | 生成测试事件或接收外部行为数据 |
+| **传输** | Pulsar | 高吞吐消息队列，支持事件持久化 |
+| **处理** | Stream | 实时聚合 + 异常模式检测 |
+| **决策** | Rules | AST 规则引擎，支持热加载 |
+| **洞察** | Insight | 用户画像 + 自动打标签 |
+| **审核** | Audit | 人工介入处理高风险事件 |
 
 ## 技术栈
 
