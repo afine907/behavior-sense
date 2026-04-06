@@ -1,30 +1,168 @@
-# BehaviorSense
+<h1 align="center">
+  <br>
+  <a href="#"><img src="https://via.placeholder.com/200x200?text=BS" alt="BehaviorSense" width="120"></a>
+  <br>
+  BehaviorSense
+  <br>
+</h1>
 
-[![CI](https://github.com/afine907/behavior-sense/actions/workflows/ci.yml/badge.svg)](https://github.com/afine907/behavior-sense/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-orange.svg)](https://docs.astral.sh/ruff/)
+<h4 align="center">用户行为流实时分析引擎</h4>
 
-**用户行为流实时分析引擎** - 面向低延迟事件处理、灵活规则匹配与智能用户打标的实时平台。
+<p align="center">
+  <a href="#-解决什么问题">解决问题</a> •
+  <a href="#-为什么选择-behaviorsense">为什么选择</a> •
+  <a href="#-核心特性">核心特性</a> •
+  <a href="#-快速开始">快速开始</a> •
+  <a href="#-架构设计">架构设计</a>
+</p>
 
-[English](README.md) | [中文](README_CN.md)
+<p align="center">
+  <a href="https://github.com/afine907/behavior-sense/actions/workflows/ci.yml">
+    <img src="https://github.com/afine907/behavior-sense/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+  </a>
+  <a href="https://docs.astral.sh/ruff/">
+    <img src="https://img.shields.io/badge/code%20style-ruff-orange.svg" alt="Code style: ruff">
+  </a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> | <a href="README_CN.md">中文</a>
+</p>
 
 ---
 
-## 概述
+## 🎯 解决什么问题？
 
-BehaviorSense 是一个用户行为流实时分析引擎，专为低延迟（< 1秒）事件处理、灵活规则匹配和智能用户打标设计。
+**实时检测用户行为中的欺诈、滥用和异常 —— 亚秒级延迟，自动决策。**
 
-### 核心特性
+BehaviorSense 是一个生产就绪的引擎，处理用户行为事件（点击、购买、登录），通过灵活的规则引擎匹配，自动给用户打标签，并标记高风险事件供人工审核。
 
-- **实时流处理** - 基于 Faust 构建的亚秒级延迟事件处理
-- **灵活规则引擎** - 基于 AST 的规则解析，支持热重载
-- **智能打标** - 自动用户画像与标签管理
-- **人工审核流程** - 内置审核工作流支持
-- **Monorepo 架构** - 清晰的关注点分离与共享库设计
-- **现代 Python 技术栈** - FastAPI、Pydantic v2、全异步
+```
+用户点击 → 流处理 → 规则匹配 → 自动打标 / 触发审核
+    ↓           < 1 秒           ↓
+ [Pulsar] ────→ [Faust] ────→ [决策] ────→ [动作]
+```
 
-### 系统架构
+---
+
+## 💡 为什么选择 BehaviorSense？
+
+| 痛点 | BehaviorSense 解决方案 |
+|------|------------------------|
+| **规则变更需要重新部署代码** | YAML/DB 热加载规则 — 无需重启 |
+| **基于 SQL 的风控检测太慢** | AST 规则引擎毫秒级评估 |
+| **误报需要人工介入** | 内置人工审核工作流 |
+| **无法看到实时情况** | 实时仪表盘 + Prometheus 指标 |
+| **单体架构难以扩展** | 微服务独立部署 |
+
+### 🚀 创新点
+
+- **⚡ 亚秒级延迟** — 从事件到决策 < 1 秒
+- **🔥 规则热加载** — 无需重启即可新增/修改规则
+- **🛡️ 安全规则解析** — 基于 AST 评估，防止代码注入
+- **👥 人工介入** — 内置审核工作流处理高风险决策
+- **📊 多层检测** — 预置登录失败、快速点击、异常购买检测器
+
+---
+
+## ✨ 核心特性
+
+<table>
+<tr>
+<td width="50%">
+
+### 🎯 规则引擎
+
+```yaml
+# rules/fraud_detection.yaml
+- name: "高额购买预警"
+  condition: "amount > 10000 and user_age_days < 7"
+  priority: 10
+  actions:
+    - type: TAG_USER
+      params: { tags: ["high_risk"] }
+    - type: TRIGGER_AUDIT
+      params: { level: "high" }
+```
+
+**支持热加载** — 修改规则无需重启服务
+
+</td>
+<td width="50%">
+
+### 🔍 内置检测器
+
+| 检测器 | 阈值 | 场景 |
+|--------|------|------|
+| 登录失败检测 | >5次/10分钟 | 暴力破解攻击 |
+| 高频操作检测 | >100次/分钟 | 机器人行为 |
+| 快速点击检测 | >20次/10秒 | 点击农场 |
+| 异常购买检测 | >5次同商品/小时 | 倒卖/欺诈 |
+
+</td>
+</tr>
+</table>
+
+### 🏗️ 全栈解决方案
+
+- **前端**: Next.js 仪表盘，监控与管理
+- **后端**: 5 个 FastAPI 微服务 + Faust 流处理器
+- **基础设施**: Pulsar、PostgreSQL、Redis、ClickHouse
+- **可观测性**: Prometheus + Grafana 仪表盘
+
+---
+
+## 🚀 快速开始
+
+### 环境要求
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) 包管理器
+- Docker & Docker Compose（基础设施）
+
+### 5 分钟启动
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/afine907/behavior-sense.git
+cd behavior-sense
+
+# 2. 安装依赖
+uv sync
+
+# 3. 启动基础设施 (Pulsar, PostgreSQL, Redis 等)
+docker compose -f infrastructure/docker/compose/base.yml up -d
+
+# 4. 启动服务（在不同终端）
+uv run uvicorn behavior_mock.main:app --port 8001      # 事件生成器
+uv run python -m behavior_stream                        # 流处理器
+uv run uvicorn behavior_rules.main:app --port 8002     # 规则引擎
+uv run uvicorn behavior_insight.main:app --port 8003   # 用户洞察
+uv run uvicorn behavior_audit.main:app --port 8004     # 审核服务
+
+# 5. 打开前端
+cd apps/web && pnpm install && pnpm dev
+# → http://localhost:5143
+```
+
+### 生成测试事件
+
+```bash
+# 启动正常流量场景
+curl -X POST http://localhost:8001/api/mock/scenario/start \
+  -H "Content-Type: application/json" \
+  -d '{"scenario_type": "normal", "rate_per_second": 100}'
+```
+
+---
+
+## 📐 架构设计
 
 ```mermaid
 flowchart TB
@@ -171,247 +309,76 @@ flowchart TB
     class TagAction,AuditAction action
 ```
 
-#### 数据流说明
+---
 
-| 阶段 | 组件 | 功能 |
+## 🛠️ 技术栈
+
+| 层级 | 技术 | 原因 |
 |------|------|------|
-| **入口** | Mock/External | 生成测试事件或接收外部行为数据 |
-| **传输** | Pulsar | 高吞吐消息队列，支持事件持久化 |
-| **处理** | Stream | 实时聚合 + 异常模式检测 |
-| **决策** | Rules | AST 规则引擎，支持热加载 |
-| **洞察** | Insight | 用户画像 + 自动打标签 |
-| **审核** | Audit | 人工介入处理高风险事件 |
+| **运行时** | Python 3.11+ | 异步支持、类型提示 |
+| **包管理** | [uv](https://docs.astral.sh/uv/) | 比 pip 快 10 倍 |
+| **Web 框架** | FastAPI | 异步、OpenAPI、类型安全 |
+| **前端** | Next.js 14 | React、SSR、App Router |
+| **流处理** | Faust | Python 中的 Kafka 流处理 |
+| **消息队列** | Apache Pulsar | 多租户、异地复制 |
+| **数据库** | PostgreSQL | ACID、可靠 |
+| **缓存** | Redis | 快速、支持发布订阅 |
+| **分析** | ClickHouse | OLAP 行为分析 |
+| **监控** | Prometheus + Grafana | 行业标准 |
 
-## 技术栈
+---
 
-| 组件 | 技术 | 用途 |
-|------|------|------|
-| 编程语言 | Python 3.11+ | 后端运行时 |
-| 包管理器 | [uv](https://docs.astral.sh/uv/) | Python 依赖管理 |
-| Web 框架 | FastAPI | REST API 服务 |
-| 前端框架 | Next.js 14 | Web 应用 |
-| 流处理 | Faust | 实时事件处理 |
-| 消息队列 | Apache Pulsar | 事件流 |
-| 数据库 | PostgreSQL | 持久化存储 |
-| 缓存 | Redis | 缓存与发布订阅 |
-| 分析 | ClickHouse | OLAP 查询 |
-| 搜索 | Elasticsearch | 全文搜索 |
-| 监控 | Prometheus + Grafana | 指标采集与可视化 |
+## 📖 文档
 
-## 项目结构
+| 文档 | 说明 |
+|------|------|
+| [架构设计](wiki/architecture.md) | 系统架构深度解析 |
+| [模块设计](wiki/modules.md) | 服务职责划分 |
+| [技术选型](wiki/technology.md) | 技术选择说明 |
+| [API 设计](wiki/api.md) | REST API 规范 |
+| [部署指南](wiki/deployment.md) | 生产环境部署 |
+| [最佳实践](wiki/best-practices.md) | FastAPI、Pydantic、SQLAlchemy 模式 |
 
-```
-behavior-sense/
-├── libs/                     # 共享库
-│   └── core/                 # behavior-core
-│       └── src/behavior_core/
-│           ├── config/       # 配置管理
-│           ├── metrics/      # Prometheus 指标
-│           ├── middleware/   # 限流、链路追踪
-│           ├── models/       # 数据模型
-│           ├── security/     # 认证与 JWT
-│           └── utils/        # 工具函数
-│
-├── packages/                 # 微服务
-│   ├── mock/                 # behavior-mock (端口 8001)
-│   ├── rules/                # behavior-rules (端口 8002)
-│   ├── insight/              # behavior-insight (端口 8003)
-│   ├── audit/                # behavior-audit (端口 8004)
-│   └── stream/               # behavior-stream (Faust)
-│
-├── apps/                     # 前端应用
-│   └── web/                  # Next.js Web 应用 (端口 5143)
-│       └── src/
-│           ├── app/          # Next.js 应用路由
-│           ├── components/   # React 组件
-│           ├── lib/          # 工具函数与 API 客户端
-│           └── types/        # TypeScript 类型定义
-│
-├── infrastructure/           # 基础设施配置
-│   └── docker/               # Dockerfile、docker-compose
-│
-├── tests/                    # 测试套件
-│   ├── test_api/             # API 测试
-│   ├── test_core/            # 核心库测试
-│   ├── test_integration/     # 集成测试
-│   ├── test_mock/            # Mock 服务测试
-│   ├── test_rules/           # 规则引擎测试
-│   ├── test_stream/          # 流处理器测试
-│   ├── test_insight/         # Insight 服务测试
-│   ├── test_audit/           # Audit 服务测试
-│   └── performance/          # Locust 性能测试
-│
-├── scripts/                  # 开发脚本
-└── wiki/                     # 项目文档
-```
+---
 
-## 快速开始
-
-### 环境要求
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) 包管理器
-- Docker & Docker Compose
-
-### 安装步骤
+## 🧪 测试
 
 ```bash
-# 克隆仓库
-git clone https://github.com/afine907/behavior-sense.git
-cd behavior-sense
+# 快速测试（无外部依赖）
+uv run pytest tests/test_api/test_mock_api.py tests/test_api/test_rules_api.py -v
 
-# 安装依赖
-uv sync
-
-# 复制环境配置
-cp .env.example .env
-
-# 启动基础设施服务
-docker-compose up -d
-```
-
-### 运行服务
-
-```bash
-# 运行 mock 服务（生成测试事件）
-uv run uvicorn behavior_mock.main:app --port 8001
-
-# 运行流处理器
-uv run python -m behavior_stream
-
-# 运行 insight API
-uv run uvicorn behavior_insight.main:app --port 8003
-
-# 运行审核服务
-uv run uvicorn behavior_audit.main:app --port 8004
-```
-
-### 运行测试
-
-项目采用**双模式测试架构**，支持快速迭代与生产验证：
-
-```bash
-# Mock 模式（快速，无外部依赖）
-uv run pytest tests/test_api/test_mock_api.py tests/test_api/test_rules_api.py tests/test_integration/test_basic_integration.py -v
-
-# 真实依赖模式（需要 Docker）
-docker-compose -f docker-compose.test.yml up -d
+# 完整集成测试（需要 Docker）
+docker compose -f infrastructure/docker/compose/test.yml up -d
 TEST_REAL_DEPS=1 uv run pytest tests/ -v
-docker-compose -f docker-compose.test.yml down -v
 
-# 运行覆盖率测试
+# 带覆盖率
 uv run pytest tests/ --cov=libs --cov=packages --cov-report=html
-
-# 使用测试脚本
-./scripts/run_tests.sh           # Mock 模式
-./scripts/run_tests.sh --real    # 真实依赖模式
-./scripts/run_tests.sh --all     # 全部测试
 ```
 
-| 模式 | 依赖 | 适用场景 |
-|------|------|----------|
-| Mock | 无 | 快速迭代、本地开发 |
-| Real | Redis + PostgreSQL | CI 验证、上线前检查 |
+---
 
-详细测试文档请参阅 [tests/test_api/TEST_REPORT.md](tests/test_api/TEST_REPORT.md)。
+## 🤝 参与贡献
 
-## 服务端口
-
-| 服务 | 端口 | 描述 |
-|------|------|------|
-| behavior-mock | 8001 | 事件生成器 |
-| behavior-rules | 8002 | 规则引擎 API |
-| behavior-insight | 8003 | 用户洞察 API |
-| behavior-audit | 8004 | 审核工作流 API |
-| web | 5143 | 前端 Web 应用 |
-| Pulsar | 6650 | 消息队列 |
-| PostgreSQL | 5432 | 数据库 |
-| Redis | 6379 | 缓存 |
-| ClickHouse | 8123 | 分析引擎 |
-| Elasticsearch | 9200 | 搜索引擎 |
-| Prometheus | 9090 | 指标采集 |
-| Grafana | 3000 | 监控面板 |
-
-## API 文档
-
-各服务均提供 OpenAPI 文档：
-
-- Mock: http://localhost:8001/docs
-- Rules: http://localhost:8002/docs
-- Insight: http://localhost:8003/docs
-- Audit: http://localhost:8004/docs
-- Web: http://localhost:5143
-
-## 开发指南
-
-### 添加依赖
-
-```bash
-# 添加到根项目
-uv add httpx
-
-# 添加到指定包
-uv add --package behavior-audit httpx
-
-# 添加开发依赖
-uv add --group dev black
-```
-
-### 代码质量
-
-```bash
-# 代码检查
-uv run ruff check libs/ packages/
-
-# 代码格式化
-uv run ruff format libs/ packages/
-
-# 类型检查
-uv run mypy libs/core/src packages/*/src
-```
-
-### Docker 构建
-
-```bash
-# 构建指定服务
-docker build -f infrastructure/docker/Dockerfile --build-arg SERVICE=insight -t behaviorsense/insight:latest .
-```
-
-## 文档
-
-- [架构设计](wiki/architecture.md)
-- [模块设计](wiki/modules.md)
-- [技术选型](wiki/technology.md)
-- [API 设计](wiki/api.md)
-- [部署指南](wiki/deployment.md)
-- [最佳实践](wiki/best-practices.md)
-- [开发计划](PLAN.md)
-
-## 参与贡献
-
-欢迎参与贡献！请遵循以下步骤：
-
-1. Fork 本仓库
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 使用 [Conventional Commits](https://www.conventionalcommits.org/) 规范提交
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建 Pull Request
+欢迎参与贡献！请遵循 [贡献指南](CONTRIBUTING.md)。
 
 ### 提交规范
 
-所有提交信息必须遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+所有提交必须遵循 [Conventional Commits](https://www.conventionalcommits.org/)：
 
 ```
-<type>(<scope>): <description>
-
-# 示例
 feat(audit): add audit state machine for review workflow
 fix(rules): prevent eval injection with AST parser
 docs(api): update endpoint documentation
-test(core): add unit tests for models
-refactor: migrate to monorepo structure
 ```
 
-## 许可证
+---
 
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
+## 📄 许可证
+
+MIT 许可证 - 详见 [LICENSE](LICENSE)。
+
+---
+
+<p align="center">
+  <b>觉得有用？给个 Star ⭐ 吧！</b>
+</p>

@@ -1,30 +1,168 @@
-# BehaviorSense
+<h1 align="center">
+  <br>
+  <a href="#"><img src="https://via.placeholder.com/200x200?text=BS" alt="BehaviorSense" width="120"></a>
+  <br>
+  BehaviorSense
+  <br>
+</h1>
 
-[![CI](https://github.com/afine907/behavior-sense/actions/workflows/ci.yml/badge.svg)](https://github.com/afine907/behavior-sense/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-orange.svg)](https://docs.astral.sh/ruff/)
+<h4 align="center">Real-time User Behavior Stream Analytics Engine</h4>
 
-**User Behavior Stream Analytics Engine** - A real-time user behavior stream processing and analysis platform.
+<p align="center">
+  <a href="#-why-behaviorsense">Why</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-architecture">Architecture</a> •
+  <a href="#-documentation">Documentation</a>
+</p>
 
-[English](README.md) | [中文](README_CN.md)
+<p align="center">
+  <a href="https://github.com/afine907/behavior-sense/actions/workflows/ci.yml">
+    <img src="https://github.com/afine907/behavior-sense/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+  </a>
+  <a href="https://docs.astral.sh/ruff/">
+    <img src="https://img.shields.io/badge/code%20style-ruff-orange.svg" alt="Code style: ruff">
+  </a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> | <a href="README_CN.md">中文</a>
+</p>
 
 ---
 
-## Overview
+## 🎯 What Problem Does It Solve?
 
-BehaviorSense is a real-time user behavior stream analytics engine designed for low-latency (< 1s) event processing, flexible rule matching, and intelligent user tagging.
+**Detect fraud, abuse, and anomalies in user behavior — in real-time, with sub-second latency.**
 
-### Key Features
+BehaviorSense is a production-ready engine that processes user behavior events (clicks, purchases, logins) through a flexible rule engine, automatically tags users based on patterns, and flags high-risk events for human review.
 
-- **Real-time Stream Processing** - Built on Faust for sub-second latency event processing
-- **Flexible Rule Engine** - AST-based rule parsing with hot-reload support
-- **Intelligent Tagging** - Automatic user profiling and tag management
-- **Human-in-the-loop Audit** - Built-in workflow for manual review process
-- **Monorepo Architecture** - Clean separation of concerns with shared libraries
-- **Modern Python Stack** - FastAPI, Pydantic v2, asyncio throughout
+```
+User clicks → Stream processes → Rules match → Auto-tag / Flag for audit
+     ↓              < 1 second           ↓
+  [Pulsar] ──────→ [Faust] ──────→ [Decision] ──────→ [Action]
+```
 
-### Architecture
+---
+
+## 💡 Why BehaviorSense?
+
+| Pain Point | BehaviorSense Solution |
+|------------|------------------------|
+| **Rule changes require code deploy** | Hot-reload rules via YAML/DB — no restart needed |
+| **SQL-based fraud detection is slow** | AST-based rule engine evaluates in milliseconds |
+| **False positives need manual review** | Built-in human-in-the-loop audit workflow |
+| **Can't see what's happening now** | Real-time dashboard + Prometheus metrics |
+| **Monolith is hard to scale** | Microservices with independent deployment |
+
+### 🚀 Innovations
+
+- **⚡ Sub-second Latency** — From event to decision in < 1 second
+- **🔥 Hot-reload Rules** — Add/modify rules without service restart
+- **🛡️ Safe Rule Parsing** — AST-based evaluation prevents code injection
+- **👥 Human-in the-loop** — Built-in audit workflow for high-stakes decisions
+- **📊 Multi-layer Detection** — Pre-built detectors for login failures, rapid clicks, unusual purchases
+
+---
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🎯 Rule Engine
+
+```yaml
+# rules/fraud_detection.yaml
+- name: "High Value Purchase Alert"
+  condition: "amount > 10000 and user_age_days < 7"
+  priority: 10
+  actions:
+    - type: TAG_USER
+      params: { tags: ["high_risk"] }
+    - type: TRIGGER_AUDIT
+      params: { level: "high" }
+```
+
+**Hot-reload enabled** — modify rules without restart
+
+</td>
+<td width="50%">
+
+### 🔍 Built-in Detectors
+
+| Detector | Threshold | Use Case |
+|----------|-----------|----------|
+| Login Failure | >5 fails/10min | Brute force attack |
+| High Frequency | >100 events/min | Bot activity |
+| Rapid Click | >20 clicks/10s | Click farming |
+| Unusual Purchase | >5 same-item/hour | Reselling/fraud |
+
+</td>
+</tr>
+</table>
+
+### 🏗️ Full-Stack Solution
+
+- **Frontend**: Next.js dashboard for monitoring & management
+- **Backend**: 5 FastAPI microservices + Faust stream processor
+- **Infrastructure**: Pulsar, PostgreSQL, Redis, ClickHouse
+- **Observability**: Prometheus + Grafana dashboards
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) package manager
+- Docker & Docker Compose (for infrastructure)
+
+### 5-Minute Setup
+
+```bash
+# 1. Clone
+git clone https://github.com/afine907/behavior-sense.git
+cd behavior-sense
+
+# 2. Install dependencies
+uv sync
+
+# 3. Start infrastructure (Pulsar, PostgreSQL, Redis, etc.)
+docker compose -f infrastructure/docker/compose/base.yml up -d
+
+# 4. Start services (in separate terminals)
+uv run uvicorn behavior_mock.main:app --port 8001      # Event generator
+uv run python -m behavior_stream                        # Stream processor
+uv run uvicorn behavior_rules.main:app --port 8002     # Rule engine
+uv run uvicorn behavior_insight.main:app --port 8003   # User insights
+uv run uvicorn behavior_audit.main:app --port 8004     # Audit workflow
+
+# 5. Open dashboard
+cd apps/web && pnpm install && pnpm dev
+# → http://localhost:5143
+```
+
+### Generate Test Events
+
+```bash
+# Start a normal traffic scenario
+curl -X POST http://localhost:8001/api/mock/scenario/start \
+  -H "Content-Type: application/json" \
+  -d '{"scenario_type": "normal", "rate_per_second": 100}'
+```
+
+---
+
+## 📐 Architecture
 
 ```mermaid
 flowchart TB
@@ -171,247 +309,76 @@ flowchart TB
     class TagAction,AuditAction action
 ```
 
-#### Data Flow Description
+---
 
-| Stage | Component | Function |
-|-------|-----------|----------|
-| **Ingestion** | Mock/External | Generate test events or receive external behavior data |
-| **Transport** | Pulsar | High-throughput message queue with event persistence |
-| **Processing** | Stream | Real-time aggregation + anomaly pattern detection |
-| **Decision** | Rules | AST-based rule engine with hot-reload support |
-| **Insight** | Insight | User profiling + automatic tagging |
-| **Audit** | Audit | Human-in-the-loop for high-risk events |
+## 🛠️ Tech Stack
 
-## Tech Stack
+| Layer | Technology | Why |
+|-------|------------|-----|
+| **Runtime** | Python 3.11+ | Async support, type hints |
+| **Package Manager** | [uv](https://docs.astral.sh/uv/) | 10x faster than pip |
+| **Web Framework** | FastAPI | Async, OpenAPI, type-safe |
+| **Frontend** | Next.js 14 | React, SSR, App Router |
+| **Stream Processing** | Faust | Kafka-like streaming in Python |
+| **Message Queue** | Apache Pulsar | Multi-tenancy, geo-replication |
+| **Database** | PostgreSQL | ACID, reliable |
+| **Cache** | Redis | Fast, pub/sub support |
+| **Analytics** | ClickHouse | OLAP for behavior analysis |
+| **Monitoring** | Prometheus + Grafana | Industry standard |
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Language | Python 3.11+ | Backend runtime |
-| Package Manager | [uv](https://docs.astral.sh/uv/) | Python dependency management |
-| Web Framework | FastAPI | REST API services |
-| Frontend | Next.js 14 | Web application |
-| Stream Processing | Faust | Real-time event processing |
-| Message Queue | Apache Pulsar | Event streaming |
-| Database | PostgreSQL | Persistent storage |
-| Cache | Redis | Caching & pub/sub |
-| Analytics | ClickHouse | OLAP queries |
-| Search | Elasticsearch | Full-text search |
-| Monitoring | Prometheus + Grafana | Metrics & visualization |
+---
 
-## Project Structure
+## 📖 Documentation
 
-```
-behavior-sense/
-├── libs/                     # Shared libraries
-│   └── core/                 # behavior-core
-│       └── src/behavior_core/
-│           ├── config/       # Configuration management
-│           ├── metrics/      # Prometheus metrics
-│           ├── middleware/   # Rate limiting, tracing
-│           ├── models/       # Data models
-│           ├── security/     # Auth & JWT
-│           └── utils/        # Utilities
-│
-├── packages/                 # Microservices
-│   ├── mock/                 # behavior-mock (port 8001)
-│   ├── rules/                # behavior-rules (port 8002)
-│   ├── insight/              # behavior-insight (port 8003)
-│   ├── audit/                # behavior-audit (port 8004)
-│   └── stream/               # behavior-stream (Faust)
-│
-├── apps/                     # Frontend applications
-│   └── web/                  # Next.js web app (port 5143)
-│       └── src/
-│           ├── app/          # Next.js app router
-│           ├── components/   # React components
-│           ├── lib/          # Utilities & API clients
-│           └── types/        # TypeScript types
-│
-├── infrastructure/           # Infrastructure configs
-│   └── docker/               # Dockerfile, docker-compose
-│
-├── tests/                    # Test suites
-│   ├── test_api/             # API tests
-│   ├── test_core/            # Core library tests
-│   ├── test_integration/     # Integration tests
-│   ├── test_mock/            # Mock service tests
-│   ├── test_rules/           # Rules engine tests
-│   ├── test_stream/          # Stream processor tests
-│   ├── test_insight/         # Insight service tests
-│   ├── test_audit/           # Audit service tests
-│   └── performance/          # Locust performance tests
-│
-├── scripts/                  # Development scripts
-└── wiki/                     # Documentation
-```
+| Document | Description |
+|----------|-------------|
+| [Architecture Design](wiki/architecture.md) | System architecture deep dive |
+| [Module Design](wiki/modules.md) | Service responsibilities |
+| [Technology Stack](wiki/technology.md) | Tech choices explained |
+| [API Design](wiki/api.md) | REST API specifications |
+| [Deployment Guide](wiki/deployment.md) | Production deployment |
+| [Best Practices](wiki/best-practices.md) | FastAPI, Pydantic, SQLAlchemy patterns |
 
-## Quick Start
+---
 
-### Prerequisites
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) package manager
-- Docker & Docker Compose
-
-### Installation
+## 🧪 Testing
 
 ```bash
-# Clone the repository
-git clone https://github.com/afine907/behavior-sense.git
-cd behavior-sense
+# Fast tests (no external dependencies)
+uv run pytest tests/test_api/test_mock_api.py tests/test_api/test_rules_api.py -v
 
-# Install dependencies
-uv sync
-
-# Copy environment config
-cp .env.example .env
-
-# Start infrastructure services
-docker-compose up -d
-```
-
-### Running Services
-
-```bash
-# Run mock service (generates test events)
-uv run uvicorn behavior_mock.main:app --port 8001
-
-# Run stream processor
-uv run python -m behavior_stream
-
-# Run insight API
-uv run uvicorn behavior_insight.main:app --port 8003
-
-# Run audit service
-uv run uvicorn behavior_audit.main:app --port 8004
-```
-
-### Running Tests
-
-The project uses a **dual-mode testing architecture** for fast iteration and production verification:
-
-```bash
-# Mock mode (fast, no external dependencies)
-uv run pytest tests/test_api/test_mock_api.py tests/test_api/test_rules_api.py tests/test_integration/test_basic_integration.py -v
-
-# Real dependencies mode (requires Docker)
-docker-compose -f docker-compose.test.yml up -d
+# Full integration tests (requires Docker)
+docker compose -f infrastructure/docker/compose/test.yml up -d
 TEST_REAL_DEPS=1 uv run pytest tests/ -v
-docker-compose -f docker-compose.test.yml down -v
 
-# Run with coverage
+# With coverage
 uv run pytest tests/ --cov=libs --cov=packages --cov-report=html
-
-# Using the test script
-./scripts/run_tests.sh           # Mock mode
-./scripts/run_tests.sh --real    # Real dependencies
-./scripts/run_tests.sh --all     # All tests
 ```
 
-| Mode | Dependencies | Use Case |
-|------|--------------|----------|
-| Mock | None | Fast iteration, local development |
-| Real | Redis + PostgreSQL | CI verification, pre-production check |
+---
 
-For detailed test documentation, see [tests/test_api/TEST_REPORT.md](tests/test_api/TEST_REPORT.md).
+## 🤝 Contributing
 
-## Service Ports
-
-| Service | Port | Description |
-|---------|------|-------------|
-| behavior-mock | 8001 | Event generator |
-| behavior-rules | 8002 | Rule engine API |
-| behavior-insight | 8003 | User insight API |
-| behavior-audit | 8004 | Audit workflow API |
-| web | 5143 | Frontend web application |
-| Pulsar | 6650 | Message queue |
-| PostgreSQL | 5432 | Database |
-| Redis | 6379 | Cache |
-| ClickHouse | 8123 | Analytics |
-| Elasticsearch | 9200 | Search engine |
-| Prometheus | 9090 | Metrics collection |
-| Grafana | 3000 | Monitoring dashboard |
-
-## API Documentation
-
-Each service provides OpenAPI documentation:
-
-- Mock: http://localhost:8001/docs
-- Rules: http://localhost:8002/docs
-- Insight: http://localhost:8003/docs
-- Audit: http://localhost:8004/docs
-- Web: http://localhost:5143
-
-## Development
-
-### Adding Dependencies
-
-```bash
-# Add to root project
-uv add httpx
-
-# Add to specific package
-uv add --package behavior-audit httpx
-
-# Add dev dependency
-uv add --group dev black
-```
-
-### Code Quality
-
-```bash
-# Lint
-uv run ruff check libs/ packages/
-
-# Format
-uv run ruff format libs/ packages/
-
-# Type check
-uv run mypy libs/core/src packages/*/src
-```
-
-### Docker Build
-
-```bash
-# Build specific service
-docker build -f infrastructure/docker/Dockerfile --build-arg SERVICE=insight -t behaviorsense/insight:latest .
-```
-
-## Documentation
-
-- [Architecture Design](wiki/architecture.md)
-- [Module Design](wiki/modules.md)
-- [Technology Stack](wiki/technology.md)
-- [API Design](wiki/api.md)
-- [Deployment Guide](wiki/deployment.md)
-- [Best Practices](wiki/best-practices.md)
-- [Development Plan](PLAN.md)
-
-## Contributing
-
-We welcome contributions! Please see our contributing guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! See [Contributing Guidelines](CONTRIBUTING.md).
 
 ### Commit Convention
 
-All commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
+All commits must follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-<type>(<scope>): <description>
-
-# Examples
 feat(audit): add audit state machine for review workflow
 fix(rules): prevent eval injection with AST parser
 docs(api): update endpoint documentation
-test(core): add unit tests for models
-refactor: migrate to monorepo structure
 ```
 
-## License
+---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <b>Star ⭐ this repo if you find it useful!</b>
+</p>
