@@ -80,10 +80,10 @@ class TestRulesToInsightIntegration:
         generate_user_id: str
     ):
         """测试带 TTL 的标签操作"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         # 创建带过期时间的标签
-        expire_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+        expire_at = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
 
         response = await insight_client.put(
             f"/api/insight/user/{generate_user_id}/tag",

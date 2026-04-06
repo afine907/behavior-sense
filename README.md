@@ -7,7 +7,7 @@
 
 **User Behavior Stream Analytics Engine** - A real-time user behavior stream processing and analysis platform.
 
-[English](#overview) | [中文文档](#中文文档)
+[English](README.md) | [中文](README_CN.md)
 
 ---
 
@@ -254,39 +254,3 @@ refactor: migrate to monorepo structure
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 中文文档
-
-### 项目简介
-
-BehaviorSense 是一个用户行为流实时分析引擎，专为低延迟 (< 1秒) 事件处理、灵活规则匹配和智能用户打标设计。
-
-### 核心功能
-
-1. **Mock** - 模拟生成用户行为日志
-2. **Stream** - 实时流处理计算 (Faust)
-3. **Rules** - 规则引擎（规则匹配与触发）
-4. **Insight** - 分析洞察（标签生成与画像）
-5. **Audit** - 人工审核服务
-
-### 快速开始
-
-```bash
-# 安装依赖
-uv sync
-
-# 启动基础设施
-docker-compose up -d
-
-# 运行服务
-uv run uvicorn behavior_insight.main:app --port 8003
-```
-
-### 文档
-
-- [架构设计](wiki/architecture.md)
-- [模块设计](wiki/modules.md)
-- [技术选型](wiki/technology.md)
-- [最佳实践](wiki/best-practices.md)

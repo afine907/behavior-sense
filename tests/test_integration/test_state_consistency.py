@@ -4,6 +4,7 @@
 验证并发操作和数据一致性
 """
 import asyncio
+import os
 import pytest
 from httpx import AsyncClient
 
@@ -316,6 +317,10 @@ class TestRuleEvaluationIdempotency:
 class TestDataIntegrity:
     """数据完整性测试"""
 
+    @pytest.mark.skipif(
+        os.getenv("TEST_REAL_DEPS", "").lower() not in ("1", "true", "yes"),
+        reason="用户画像功能需要真实数据库连接"
+    )
     async def test_user_profile_consistency(
         self,
         insight_client: AsyncClient,
