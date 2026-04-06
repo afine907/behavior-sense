@@ -1,0 +1,163 @@
+# BehaviorSense - Application Services
+# Usage: docker compose -f base.yml -f services.yml up
+#
+# Contains: mock, stream, rules, insight, audit, web
+
+services:
+  # ===== 后端服务 =====
+  mock:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: mock
+    image: behavior-sense/mock:latest
+    container_name: behavior-mock
+    ports:
+      - "8001:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=behavior_sense
+      - REDIS_URL=redis://redis:6379
+      - PULSAR_URL=pulsar://pulsar:6650
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+    networks:
+      - behavior-net
+
+  stream:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: stream
+    image: behavior-sense/stream:latest
+    container_name: behavior-stream
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=behavior_sense
+      - REDIS_URL=redis://redis:6379
+      - PULSAR_URL=pulsar://pulsar:6650
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+    networks:
+      - behavior-net
+
+  rules:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: rules
+    image: behavior-sense/rules:latest
+    container_name: behavior-rules
+    ports:
+      - "8002:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=behavior_sense
+      - REDIS_URL=redis://redis:6379
+      - PULSAR_URL=pulsar://pulsar:6650
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - behavior-net
+
+  insight:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: insight
+    image: behavior-sense/insight:latest
+    container_name: behavior-insight
+    ports:
+      - "8003:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=behavior_sense
+      - REDIS_URL=redis://redis:6379
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - behavior-net
+
+  audit:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: audit
+    image: behavior-sense/audit:latest
+    container_name: behavior-audit
+    ports:
+      - "8004:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=behavior_sense
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - behavior-net
+
+  # ===== 前端服务 =====
+  web:
+    build:
+      context: ../../../apps/web
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+    image: behavior-sense/web:latest
+    container_name: behavior-web
+    ports:
+      - "5143:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - mock
+      - rules
+      - insight
+      - audit
+    networks:
+      - behavior-net
+
+networks:
+  behavior-net:
+    external: true

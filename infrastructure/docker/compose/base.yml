@@ -1,4 +1,7 @@
-version: '3.8'
+# BehaviorSense - Base Infrastructure
+# Usage: docker compose -f base.yml -f services.yml up
+#
+# Contains: Pulsar, PostgreSQL, Redis, ClickHouse, Elasticsearch, Prometheus, Grafana
 
 services:
   # ===== 消息队列 =====
@@ -12,13 +15,18 @@ services:
     environment:
       - PULSAR_PREFIX_clusterName=behavior-sense
       - PULSAR_PREFIX_brokerDeleteInactiveTopicsEnabled=false
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - behavior-net
 
   # ===== 数据库 =====
   postgres:
     image: postgres:15-alpine
-    platform: linux/amd64
     container_name: behavior-postgres
     ports:
       - "5432:5432"
@@ -28,17 +36,25 @@ services:
       - POSTGRES_DB=behavior_sense
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - behavior-net
 
   # ===== 缓存 =====
   redis:
     image: redis:7-alpine
-    platform: linux/amd64
     container_name: behavior-redis
     ports:
       - "6379:6379"
-    # 不使用 volume 避免挂载问题
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - behavior-net
 
@@ -51,6 +67,11 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - behavior-net
 
@@ -66,6 +87,12 @@ services:
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
     volumes:
       - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - behavior-net
 
@@ -76,7 +103,12 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./infrastructure/docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - behavior-net
 
@@ -89,12 +121,16 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin123
     volumes:
       - grafana-data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - behavior-net
 
 volumes:
   postgres-data:
-  redis-data:
   clickhouse-data:
   es-data:
   grafana-data:

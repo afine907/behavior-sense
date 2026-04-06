@@ -1,7 +1,10 @@
-# Docker Compose 测试环境配置
-# 用于运行需要外部依赖的集成测试
-
-version: '3.8'
+# BehaviorSense - Test Environment
+# Usage: docker compose -f test.yml up -d
+#
+# Lightweight test environment for CI/CD:
+# - PostgreSQL on port 5433
+# - Redis on port 6380
+# - Uses tmpfs for fast cleanup
 
 services:
   # ===== PostgreSQL 测试数据库 =====
@@ -9,7 +12,7 @@ services:
     image: postgres:15-alpine
     container_name: behavior-test-postgres
     ports:
-      - "5433:5432"  # 使用不同端口避免与开发环境冲突
+      - "5433:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -20,21 +23,21 @@ services:
       timeout: 5s
       retries: 5
     tmpfs:
-      - /var/lib/postgresql/data  # 使用内存存储，测试完成后自动清理
+      - /var/lib/postgresql/data
 
   # ===== Redis 测试缓存 =====
   redis-test:
-    image: redis:7-alpine
+    image: redis:7
     container_name: behavior-test-redis
     ports:
-      - "6380:6379"  # 使用不同端口避免与开发环境冲突
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
     tmpfs:
-      - /data  # 使用内存存储
+      - /data
 
 networks:
   default:

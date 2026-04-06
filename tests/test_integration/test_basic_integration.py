@@ -1,7 +1,10 @@
 """
-基础集成测试 - 无外部依赖
+基础集成测试
 
-测试不需要 Redis/PostgreSQL 的服务集成
+部分测试需要外部依赖（Pulsar/PostgreSQL/Redis），通过 pytest mark 标记：
+- 无标记：不需要外部依赖，可在 test-mock 中运行
+- @pytest.mark.integration: 需要 PostgreSQL/Redis
+- @pytest.mark.pulsar: 需要 Pulsar
 """
 import pytest
 from httpx import AsyncClient
@@ -178,8 +181,9 @@ class TestMockServiceIntegration:
             assert "user_id" in event
             assert "event_type" in event
 
+    @pytest.mark.pulsar
     async def test_scenario_management_flow(self, mock_client: AsyncClient):
-        """测试场景管理流程"""
+        """测试场景管理流程（需要 Pulsar）"""
         import asyncio
 
         # 启动场景

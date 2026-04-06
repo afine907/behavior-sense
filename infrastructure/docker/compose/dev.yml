@@ -1,0 +1,84 @@
+# BehaviorSense - Development Environment Override
+# Usage: docker compose -f base.yml -f services.yml -f dev.yml up
+#
+# Development-specific configurations:
+# - Volume mounts for hot-reload
+# - Exposed debug ports
+# - Development environment variables
+
+services:
+  # ===== 后端服务开发配置 =====
+  mock:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: mock
+    volumes:
+      - ../../../libs/core/src:/app/libs/core/src:ro
+      - ../../../packages/mock/src:/app/packages/mock/src:ro
+    environment:
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+
+  stream:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: stream
+    volumes:
+      - ../../../libs/core/src:/app/libs/core/src:ro
+      - ../../../packages/stream/src:/app/packages/stream/src:ro
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  rules:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: rules
+    volumes:
+      - ../../../libs/core/src:/app/libs/core/src:ro
+      - ../../../packages/rules/src:/app/packages/rules/src:ro
+    environment:
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+
+  insight:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: insight
+    volumes:
+      - ../../../libs/core/src:/app/libs/core/src:ro
+      - ../../../packages/insight/src:/app/packages/insight/src:ro
+    environment:
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+
+  audit:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      args:
+        SERVICE: audit
+    volumes:
+      - ../../../libs/core/src:/app/libs/core/src:ro
+      - ../../../packages/audit/src:/app/packages/audit/src:ro
+    environment:
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+
+  # ===== 前端服务开发配置 =====
+  web:
+    build:
+      context: ../../../apps/web
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+      target: builder  # Use builder stage for development
+    volumes:
+      - ../../../apps/web/src:/app/src:ro
+    environment:
+      - NODE_ENV=development
