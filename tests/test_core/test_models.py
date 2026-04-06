@@ -289,11 +289,11 @@ class TestTagSource:
 
     def test_tag_source_values(self):
         """测试标签来源值"""
-        assert TagSource.AUTO == "auto"
-        assert TagSource.MANUAL == "manual"
-        assert TagSource.AUDIT == "audit"
-        assert TagSource.RULE == "rule"
-        assert TagSource.IMPORT == "import"
+        assert TagSource.AUTO == "AUTO"
+        assert TagSource.MANUAL == "MANUAL"
+        assert TagSource.AUDIT == "AUDIT"
+        assert TagSource.RULE == "RULE"
+        assert TagSource.IMPORT == "IMPORT"
 
 
 class TestUserProfile:

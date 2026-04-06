@@ -142,10 +142,53 @@ class MockRedis:
     async def ping(self) -> bool:
         return True
 
+    def pipeline(self):
+        """返回一个模拟的 pipeline 对象"""
+        return MockPipeline(self)
+
     async def close(self):
         pass
 
     async def aclose(self):
+        pass
+
+
+class MockPipeline:
+    """模拟 Redis Pipeline"""
+
+    def __init__(self, redis: "MockRedis"):
+        self._redis = redis
+        self._commands: list[tuple] = []
+
+    def hgetall(self, key: str):
+        self._commands.append(('hgetall', key))
+        return self
+
+    def hget(self, key: str, field: str):
+        self._commands.append(('hget', key, field))
+        return self
+
+    def hset(self, key: str, field: str = None, value: str = None, mapping: dict = None):
+        self._commands.append(('hset', key, field, value, mapping))
+        return self
+
+    async def execute(self) -> list:
+        """执行所有命令并返回结果"""
+        results = []
+        for cmd in self._commands:
+            if cmd[0] == 'hgetall':
+                results.append(await self._redis.hgetall(cmd[1]))
+            elif cmd[0] == 'hget':
+                results.append(await self._redis.hget(cmd[1], cmd[2]))
+            elif cmd[0] == 'hset':
+                _, key, field, value, mapping = cmd
+                results.append(await self._redis.hset(key, field, value, mapping))
+        return results
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
         pass
 
 
@@ -223,22 +266,33 @@ async def insight_client() -> AsyncGenerator[AsyncClient, None]:
             ) as client:
                 yield client
     else:
-        # Mock 模式：注入 Mock 依赖
+        # Mock 模式：使用内存存储
         mock_redis_instance = MockRedis()
 
-        # 替换应用状态中的 Redis
-        original_redis = getattr(insight_app.state, "redis", None)
+        # 设置应用状态
         insight_app.state.redis = mock_redis_instance
+
+        # Mock 数据库会话工厂
+        @asynccontextmanager
+        async def mock_async_session_factory():
+            yield None
+
+        insight_app.state.async_session_factory = mock_async_session_factory
+
+        # Mock tag_service 使用内存 Redis
+        from behavior_insight.services.tag_service import TagService
+        mock_tag_service = TagService(mock_redis_instance)
+        insight_app.state.tag_service = mock_tag_service
+
+        # Mock user_repo
+        from behavior_insight.repositories.user_repo import UserRepository
+        insight_app.state.user_repo = UserRepository(None)
 
         async with AsyncClient(
             transport=ASGITransport(app=insight_app),
             base_url="http://test"
         ) as client:
             yield client
-
-        # 恢复原始状态
-        if original_redis:
-            insight_app.state.redis = original_redis
 
 
 @pytest_asyncio.fixture
