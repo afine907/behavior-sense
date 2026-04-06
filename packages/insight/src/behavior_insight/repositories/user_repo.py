@@ -2,7 +2,7 @@
 用户仓库
 使用 PostgreSQL + SQLAlchemy 异步实现
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from behavior_core.models import UserProfile, UserStat
@@ -28,7 +28,7 @@ Base = declarative_base()
 
 def utcnow_naive() -> datetime:
     """返回无时区信息的 UTC 时间（用于数据库存储）"""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UserModel(Base):

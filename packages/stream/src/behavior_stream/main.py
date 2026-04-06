@@ -5,9 +5,7 @@ BehaviorSense Stream Processor
 """
 import asyncio
 import signal
-from datetime import datetime, timezone
 
-import pulsar
 from behavior_core.config.settings import get_settings
 from behavior_core.utils.logging import get_logger, setup_logging
 

@@ -5,7 +5,7 @@
 """
 import asyncio
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import orjson
@@ -204,7 +204,11 @@ class StreamProcessor:
             window_data["event_count"] += 1
 
             # 按事件类型统计
-            event_type_str = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
+            event_type_str = (
+                event.event_type.value
+                if hasattr(event.event_type, 'value')
+                else str(event.event_type)
+            )
             if event_type_str == "view":
                 window_data["view_count"] += 1
             elif event_type_str == "click":
@@ -231,7 +235,7 @@ class StreamProcessor:
 
     async def _flush_expired_windows(self) -> None:
         """刷新过期的窗口"""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired_keys = []
 
         for window_key, data in self._window_data.items():
@@ -314,7 +318,11 @@ class StreamProcessor:
 
     async def _detect_login_failure(self, event: UserBehavior) -> AlertEvent | None:
         """检测登录失败"""
-        event_type_str = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
+        event_type_str = (
+            event.event_type.value
+            if hasattr(event.event_type, 'value')
+            else str(event.event_type)
+        )
         if event_type_str != "login":
             return None
 
@@ -379,7 +387,11 @@ class StreamProcessor:
 
     async def _detect_rapid_click(self, event: UserBehavior) -> AlertEvent | None:
         """检测快速点击"""
-        event_type_str = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
+        event_type_str = (
+            event.event_type.value
+            if hasattr(event.event_type, 'value')
+            else str(event.event_type)
+        )
         if event_type_str != "click":
             return None
 
@@ -410,7 +422,11 @@ class StreamProcessor:
 
     async def _detect_unusual_purchase(self, event: UserBehavior) -> AlertEvent | None:
         """检测异常购买"""
-        event_type_str = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
+        event_type_str = (
+            event.event_type.value
+            if hasattr(event.event_type, 'value')
+            else str(event.event_type)
+        )
         if event_type_str != "purchase":
             return None
 
@@ -460,7 +476,7 @@ class StreamProcessor:
         while True:
             await asyncio.sleep(600)  # 每10分钟
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # 清理登录失败记录
             cutoff = now - self.LOGIN_FAIL_WINDOW

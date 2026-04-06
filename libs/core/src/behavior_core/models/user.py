@@ -1,11 +1,11 @@
 """
 用户相关模型
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class UserStatus(str, Enum):
@@ -26,16 +26,16 @@ class UserLevel(str, Enum):
 
 class TagSource(str, Enum):
     """标签来源"""
-    AUTO = "auto"          # 自动打标
-    MANUAL = "manual"      # 人工打标
-    AUDIT = "audit"        # 审核打标
-    RULE = "rule"          # 规则触发
-    IMPORT = "import"      # 导入
+    AUTO = "AUTO"          # 自动打标
+    MANUAL = "MANUAL"      # 人工打标
+    AUDIT = "AUDIT"        # 审核打标
+    RULE = "RULE"          # 规则触发
+    IMPORT = "IMPORT"      # 导入
 
 
 def _utc_now() -> datetime:
     """获取当前 UTC 时间"""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class TagValue(BaseModel):

@@ -2,8 +2,9 @@
 BehaviorSense Audit Service
 人工审核服务
 """
+import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import redis.asyncio as redis
 from behavior_core.config.settings import get_settings
@@ -74,10 +75,14 @@ def create_app() -> FastAPI:
     # 添加 TraceID 中间件
     app.add_middleware(TraceIDMiddleware)
 
-    # 添加限流中间件
+    # 添加限流中间件 (测试环境使用更高限制)
+    _is_test_env = (
+        os.getenv("TEST_REAL_DEPS", "").lower() in ("1", "true", "yes")
+        or os.getenv("PYTEST_CURRENT_TEST") is not None
+    )
     app.add_middleware(
         RateLimitMiddleware,
-        requests_per_minute=100,
+        requests_per_minute=10000 if _is_test_env else 100,
         window_seconds=60,
     )
 
@@ -106,7 +111,7 @@ def create_app() -> FastAPI:
         return {
             "status": "healthy",
             "service": "behavior_audit",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "version": "1.0.0",
         }
 

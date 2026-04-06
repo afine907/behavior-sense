@@ -5,7 +5,7 @@
 """
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -110,7 +110,7 @@ async def trigger_audit(params: dict[str, Any], context: dict[str, Any]) -> dict
         "trigger_data": {
             "rule_id": rule_id,
             "context": context,
-            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "triggered_at": datetime.now(UTC).isoformat(),
             **metadata
         }
     }

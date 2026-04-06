@@ -4,8 +4,7 @@ Pulsar 消费者
 使用 pulsar-client 消费用户行为事件。
 """
 import asyncio
-from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any
 
 import orjson
 import pulsar

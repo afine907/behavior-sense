@@ -4,11 +4,11 @@
 定义规则引擎所需的数据模型，包括规则条件、动作和匹配结果。
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class ActionType(str, Enum):
@@ -22,7 +22,7 @@ class ActionType(str, Enum):
 
 def _utc_now() -> datetime:
     """获取当前 UTC 时间"""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class RuleCondition(BaseModel):

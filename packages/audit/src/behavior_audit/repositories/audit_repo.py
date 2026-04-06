@@ -2,7 +2,7 @@
 审核仓库层
 实现审核工单的数据访问
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 def utcnow_naive() -> datetime:
     """返回无时区信息的 UTC 时间（用于数据库存储）"""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AuditStatus(str, Enum):
@@ -32,6 +32,7 @@ class AuditStatus(str, Enum):
 
 class AuditLevel(str, Enum):
     """审核级别枚举"""
+    CRITICAL = "CRITICAL"
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"

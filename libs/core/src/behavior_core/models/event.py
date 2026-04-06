@@ -2,7 +2,7 @@
 用户行为事件模型
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -25,7 +25,7 @@ class EventType(str, Enum):
 
 def _utc_now() -> datetime:
     """获取当前 UTC 时间"""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class UserBehavior(BaseModel):

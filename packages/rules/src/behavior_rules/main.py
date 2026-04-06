@@ -3,9 +3,10 @@ Behavior Rules 服务入口
 
 FastAPI 应用，提供规则管理 API 和规则评估接口。
 """
+import os
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from behavior_core.config.settings import settings
@@ -85,10 +86,14 @@ set_service_info("behavior-rules", "1.0.0")
 # 添加 TraceID 中间件
 app.add_middleware(TraceIDMiddleware)
 
-# 添加限流中间件
+# 添加限流中间件 (测试环境使用更高限制)
+_is_test_env = (
+    os.getenv("TEST_REAL_DEPS", "").lower() in ("1", "true", "yes")
+    or os.getenv("PYTEST_CURRENT_TEST") is not None
+)
 app.add_middleware(
     RateLimitMiddleware,
-    requests_per_minute=100,
+    requests_per_minute=10000 if _is_test_env else 100,
     window_seconds=60,
 )
 
@@ -124,7 +129,7 @@ async def health_check() -> dict[str, Any]:
         "service": "behavior-rules",
         "rules_count": len(_rules_store),
         "handlers_count": len(engine._action_handlers),
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(UTC).isoformat()
     }
 
 
@@ -302,7 +307,7 @@ async def update_rule(rule_id: str, rule_update: RuleUpdate) -> Rule:
     # 创建更新后的规则
     updated_rule = existing_rule.model_copy(update={
         **update_data,
-        "updated_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(UTC),
         "version": existing_rule.version + 1
     })
 

@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/insight/user", tags=["tags"])
 
 class TagUpdateRequest(BaseModel):
     """标签更新请求"""
-    tag_name: str = Field(..., description="标签名")
+    tag_name: str = Field(..., min_length=1, description="标签名")
     tag_value: str = Field(..., description="标签值")
     source: TagSource = Field(default=TagSource.MANUAL, description="标签来源")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="置信度")

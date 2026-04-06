@@ -3,7 +3,7 @@
 使用 Redis 存储标签数据
 """
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as redis
@@ -74,7 +74,7 @@ class TagService:
         return UserTags(
             user_id=user_id,
             tags=tags,
-            last_update=datetime.now(timezone.utc),
+            last_update=datetime.now(UTC),
         )
 
     async def update_tag(
@@ -100,7 +100,7 @@ class TagService:
         Returns:
             更新后的标签值
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         tag_value = TagValue(
             value=value,
             timestamp=now,
@@ -247,7 +247,7 @@ class TagService:
                     {
                         "user_id": user_id,
                         "tag_name": tag_name,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                     }
                 ),
             )

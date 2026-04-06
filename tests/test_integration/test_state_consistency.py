@@ -306,8 +306,8 @@ class TestRuleEvaluationIdempotency:
             rules_client.get("/api/rules")
         )
 
-        # 所有响应应该相同
-        counts = [r.json()["total"] for r in responses]
+        # 所有响应应该相同 - API 返回列表，检查长度
+        counts = [len(r.json()) for r in responses]
         assert len(set(counts)) == 1
 
 

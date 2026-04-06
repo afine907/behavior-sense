@@ -5,7 +5,7 @@ FastAPI 应用入口
 """
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from behavior_core.config.settings import get_settings
 from behavior_core.models.event import EventType
@@ -31,7 +31,7 @@ _producer: PulsarProducer | MockProducer | None = None
 
 def _utcnow() -> datetime:
     """返回 UTC 时间（无时区信息，用于数据库存储）"""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # 请求/响应模型
@@ -149,7 +149,7 @@ async def health_check():
 
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         active_scenarios=active_count,
         producer_connected=producer_connected,
     )
@@ -261,7 +261,7 @@ async def start_scenario(
     - abnormal: 异常流量
     - gradual: 渐进负载
     """
-    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(UTC).strftime('%Y%m%d%H%M%S')
     scenario_id = request.scenario_id or f"{request.scenario_type}-{timestamp}"
 
     # 检查是否已存在
