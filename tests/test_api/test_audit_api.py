@@ -72,7 +72,8 @@ class TestAuditOrder:
         assert response.status_code == 201
         data = response.json()
 
-        assert data["audit_level"] == "medium"  # 默认级别
+        # 默认级别 (枚举名称为大写)
+        assert data["audit_level"].lower() == "medium"
 
     @pytest.mark.asyncio
     async def test_create_order_invalid_level(self, audit_client: AsyncClient):

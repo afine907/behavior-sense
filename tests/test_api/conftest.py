@@ -2,12 +2,17 @@
 API 测试配置和共享 fixtures
 """
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Generator
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
+
+# 检测测试模式
+TEST_REAL_DEPS = os.getenv("TEST_REAL_DEPS", "").lower() in ("1", "true", "yes")
 
 # 导入各服务的 FastAPI 应用
 from behavior_audit.main import app as audit_app
@@ -33,6 +38,115 @@ async def _lifespan_manager(app):
             yield
     else:
         yield
+
+
+# ============== Mock Redis 实现 ==============
+
+class MockRedis:
+    """完整的 Mock Redis 客户端"""
+
+    def __init__(self):
+        self.data: dict[str, dict] = {}
+        self.sets: dict[str, set] = {}
+        self.strings: dict[str, str] = {}
+        self.expirations: dict[str, float] = {}
+        self.published: list[tuple[str, str]] = []
+
+    async def hgetall(self, key: str) -> dict:
+        return self.data.get(key, {})
+
+    async def hget(self, key: str, field: str) -> str | None:
+        return self.data.get(key, {}).get(field)
+
+    async def hset(self, key: str, field: str = None, value: str = None, mapping: dict = None) -> int:
+        if key not in self.data:
+            self.data[key] = {}
+        if mapping:
+            self.data[key].update(mapping)
+        elif field and value is not None:
+            self.data[key][field] = value
+        return 1
+
+    async def hdel(self, key: str, *fields) -> int:
+        if key in self.data:
+            deleted = 0
+            for field in fields:
+                if field in self.data[key]:
+                    del self.data[key][field]
+                    deleted += 1
+            return deleted
+        return 0
+
+    async def get(self, key: str) -> str | None:
+        return self.strings.get(key)
+
+    async def set(self, key: str, value: str, ex: int = None) -> bool:
+        self.strings[key] = value
+        return True
+
+    async def delete(self, key: str) -> int:
+        count = 0
+        if key in self.data:
+            del self.data[key]
+            count += 1
+        if key in self.sets:
+            del self.sets[key]
+            count += 1
+        if key in self.strings:
+            del self.strings[key]
+            count += 1
+        return count
+
+    async def sadd(self, key: str, *members) -> int:
+        if key not in self.sets:
+            self.sets[key] = set()
+        added = 0
+        for member in members:
+            if member not in self.sets[key]:
+                self.sets[key].add(member)
+                added += 1
+        return added
+
+    async def srem(self, key: str, *members) -> int:
+        if key not in self.sets:
+            return 0
+        removed = 0
+        for member in members:
+            if member in self.sets[key]:
+                self.sets[key].remove(member)
+                removed += 1
+        return removed
+
+    async def smembers(self, key: str) -> set:
+        return self.sets.get(key, set())
+
+    async def exists(self, key: str) -> bool:
+        return key in self.data or key in self.sets or key in self.strings
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        if await self.exists(key):
+            self.expirations[key] = asyncio.get_event_loop().time() + seconds
+            return True
+        return False
+
+    async def ttl(self, key: str) -> int:
+        if key not in self.expirations:
+            return -1
+        remaining = self.expirations[key] - asyncio.get_event_loop().time()
+        return max(0, int(remaining))
+
+    async def publish(self, channel: str, message: str) -> int:
+        self.published.append((channel, message))
+        return 1
+
+    async def ping(self) -> bool:
+        return True
+
+    async def close(self):
+        pass
+
+    async def aclose(self):
+        pass
 
 
 # ============== Mock 服务 Fixtures ==============
@@ -94,24 +208,72 @@ def sample_context() -> dict:
 
 @pytest_asyncio.fixture
 async def insight_client() -> AsyncGenerator[AsyncClient, None]:
-    """Insight 服务测试客户端"""
-    async with _lifespan_manager(insight_app):
+    """Insight 服务测试客户端
+
+    模式选择：
+    - TEST_REAL_DEPS=1: 使用真实 PostgreSQL + Redis
+    - 默认: 使用 Mock 依赖
+    """
+    if TEST_REAL_DEPS:
+        # 真实依赖模式
+        async with _lifespan_manager(insight_app):
+            async with AsyncClient(
+                transport=ASGITransport(app=insight_app),
+                base_url="http://test"
+            ) as client:
+                yield client
+    else:
+        # Mock 模式：注入 Mock 依赖
+        mock_redis_instance = MockRedis()
+
+        # 替换应用状态中的 Redis
+        original_redis = getattr(insight_app.state, "redis", None)
+        insight_app.state.redis = mock_redis_instance
+
         async with AsyncClient(
             transport=ASGITransport(app=insight_app),
             base_url="http://test"
         ) as client:
             yield client
 
+        # 恢复原始状态
+        if original_redis:
+            insight_app.state.redis = original_redis
+
 
 @pytest_asyncio.fixture
 async def audit_client() -> AsyncGenerator[AsyncClient, None]:
-    """Audit 服务测试客户端"""
-    async with _lifespan_manager(audit_app):
+    """Audit 服务测试客户端
+
+    模式选择：
+    - TEST_REAL_DEPS=1: 使用真实 PostgreSQL + Redis
+    - 默认: 使用 Mock 依赖
+    """
+    if TEST_REAL_DEPS:
+        # 真实依赖模式
+        async with _lifespan_manager(audit_app):
+            async with AsyncClient(
+                transport=ASGITransport(app=audit_app),
+                base_url="http://test"
+            ) as client:
+                yield client
+    else:
+        # Mock 模式：注入 Mock 依赖
+        mock_redis_instance = MockRedis()
+
+        # 替换应用状态中的 Redis
+        original_redis = getattr(audit_app.state, "redis", None)
+        audit_app.state.redis = mock_redis_instance
+
         async with AsyncClient(
             transport=ASGITransport(app=audit_app),
             base_url="http://test"
         ) as client:
             yield client
+
+        # 恢复原始状态
+        if original_redis:
+            audit_app.state.redis = original_redis
 
 
 @pytest.fixture

@@ -54,7 +54,7 @@ class TestInsightTags:
             json={
                 "tag_name": "level",
                 "tag_value": "vip",
-                "source": "MANUAL",
+                "source": "manual",  # 使用小写匹配枚举值
                 "confidence": 1.0
             }
         )
