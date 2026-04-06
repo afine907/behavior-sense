@@ -42,13 +42,13 @@ class TestAuditFlow:
         assert create_rule_response.status_code == 201
         rule_id = create_rule_response.json()["id"]
 
-        # Step 2: 评估规则（dry-run）
+        # Step 2: 评估规则（dry-run）- 使用正确的请求格式
         dry_run_response = await rules.post(
             "/api/rules/evaluate/dry-run",
-            json=sample_user_context_suspicious
+            json={"context": sample_user_context_suspicious}
         )
         assert dry_run_response.status_code == 200
-        assert dry_run_response.json()["matched_count"] >= 1
+        assert len(dry_run_response.json()["matched_rules"]) >= 1
 
         # Step 3: 创建审核工单
         create_order_response = await audit.post(

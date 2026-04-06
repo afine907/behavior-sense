@@ -39,17 +39,17 @@ class TestRulesToInsightIntegration:
         assert create_response.status_code == 201
         rule_id = create_response.json()["id"]
 
-        # 2. 评估规则（dry-run 模式，不执行动作）
+        # 2. 评估规则（dry-run 模式，不执行动作）- 使用正确的请求格式
         dry_run_response = await rules_client.post(
             "/api/rules/evaluate/dry-run",
-            json=sample_user_context_high_value
+            json={"context": sample_user_context_high_value}
         )
         assert dry_run_response.status_code == 200
         result = dry_run_response.json()
 
         # 验证规则匹配
-        assert result["matched_count"] >= 1
-        matched_rules = [r["name"] for r in result["matched_rules"]]
+        assert len(result["matched_rules"]) >= 1
+        matched_rules = [r["rule_name"] for r in result["matched_rules"]]
         assert "高价值用户识别" in matched_rules
 
         # 3. 实际执行评估（会触发动作）
@@ -153,16 +153,16 @@ class TestRulesToAuditIntegration:
         )
         assert create_response.status_code == 201
 
-        # 2. Dry-run 评估
+        # 2. Dry-run 评估 - 使用正确的请求格式
         dry_run_response = await rules_client.post(
             "/api/rules/evaluate/dry-run",
-            json=sample_user_context_suspicious
+            json={"context": sample_user_context_suspicious}
         )
         assert dry_run_response.status_code == 200
         result = dry_run_response.json()
 
         # 验证规则匹配
-        assert result["matched_count"] >= 1
+        assert len(result["matched_rules"]) >= 1
 
         # 3. 直接在 Audit 服务创建工单（模拟规则动作）
         order_response = await audit_client.post(

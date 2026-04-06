@@ -189,6 +189,7 @@ class TestConcurrentAuditOperations:
             "/api/audit/order",
             json={"user_id": "concurrent_assign_user", "rule_id": "test"}
         )
+        assert create_response.status_code == 201, f"Expected 201, got {create_response.status_code}: {create_response.text}"
         order_id = create_response.json()["id"]
 
         # 并发分配给不同的人
@@ -219,6 +220,7 @@ class TestConcurrentAuditOperations:
             "/api/audit/order",
             json={"user_id": "concurrent_review_user", "rule_id": "test"}
         )
+        assert create_response.status_code == 201, f"Expected 201, got {create_response.status_code}: {create_response.text}"
         order_id = create_response.json()["id"]
 
         await audit_client.put(
@@ -268,18 +270,18 @@ class TestRuleEvaluationIdempotency:
             "total_amount": 5000
         }
 
-        # 多次 dry-run 评估
+        # 多次 dry-run 评估 - 使用正确的请求格式
         results = []
         for _ in range(3):
             response = await rules_client.post(
                 "/api/rules/evaluate/dry-run",
-                json=context
+                json={"context": context}
             )
             assert response.status_code == 200
             results.append(response.json())
 
         # 结果应该一致
-        matched_counts = [r["matched_count"] for r in results]
+        matched_counts = [len(r["matched_rules"]) for r in results]
         assert len(set(matched_counts)) == 1  # 所有结果相同
 
     async def test_rule_list_consistency(

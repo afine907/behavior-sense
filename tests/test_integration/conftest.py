@@ -159,10 +159,53 @@ class MockRedis:
     async def ping(self) -> bool:
         return True
 
+    def pipeline(self):
+        """返回一个模拟的 pipeline 对象"""
+        return MockPipeline(self)
+
     async def close(self):
         pass
 
     async def aclose(self):
+        pass
+
+
+class MockPipeline:
+    """模拟 Redis Pipeline"""
+
+    def __init__(self, redis: MockRedis):
+        self._redis = redis
+        self._commands: list[tuple] = []
+
+    def hgetall(self, key: str):
+        self._commands.append(('hgetall', key))
+        return self
+
+    def hget(self, key: str, field: str):
+        self._commands.append(('hget', key, field))
+        return self
+
+    def hset(self, key: str, field: str = None, value: str = None, mapping: dict = None):
+        self._commands.append(('hset', key, field, value, mapping))
+        return self
+
+    async def execute(self) -> list:
+        """执行所有命令并返回结果"""
+        results = []
+        for cmd in self._commands:
+            if cmd[0] == 'hgetall':
+                results.append(await self._redis.hgetall(cmd[1]))
+            elif cmd[0] == 'hget':
+                results.append(await self._redis.hget(cmd[1], cmd[2]))
+            elif cmd[0] == 'hset':
+                _, key, field, value, mapping = cmd
+                results.append(await self._redis.hset(key, field, value, mapping))
+        return results
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
         pass
 
 
@@ -235,22 +278,35 @@ async def insight_client() -> AsyncGenerator[AsyncClient, None]:
             ) as client:
                 yield client
     else:
-        # Mock 模式：注入 Mock 依赖
+        # Mock 模式：使用内存存储
         mock_redis_instance = MockRedis()
 
-        # 替换应用状态中的 Redis
-        original_redis = getattr(insight_app.state, "redis", None)
+        # 设置应用状态
         insight_app.state.redis = mock_redis_instance
+
+        # Mock 数据库会话工厂
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def mock_async_session_factory():
+            yield None
+
+        insight_app.state.async_session_factory = mock_async_session_factory
+
+        # Mock tag_service 使用内存 Redis
+        from behavior_insight.services.tag_service import TagService
+        mock_tag_service = TagService(mock_redis_instance)
+        insight_app.state.tag_service = mock_tag_service
+
+        # Mock user_repo
+        from behavior_insight.repositories.user_repo import UserRepository
+        insight_app.state.user_repo = UserRepository(None)
 
         async with AsyncClient(
             transport=ASGITransport(app=insight_app),
             base_url="http://test-insight"
         ) as client:
             yield client
-
-        # 恢复原始状态
-        if original_redis:
-            insight_app.state.redis = original_redis
 
 
 @pytest_asyncio.fixture
@@ -270,12 +326,88 @@ async def audit_client() -> AsyncGenerator[AsyncClient, None]:
             ) as client:
                 yield client
     else:
-        # Mock 模式：注入 Mock 依赖
-        mock_redis_instance = MockRedis()
+        # Mock 模式：使用内存存储
+        from unittest.mock import AsyncMock, patch
+        from behavior_audit.repositories.audit_repo import AuditOrder, AuditLevel, AuditStatus
+        from datetime import datetime, UTC
 
-        # 替换应用状态中的 Redis
-        original_redis = getattr(audit_app.state, "redis", None)
-        audit_app.state.redis = mock_redis_instance
+        # 创建内存存储
+        _audit_store: dict[str, AuditOrder] = {}
+
+        class MockAuditRepository:
+            """内存审核仓库"""
+            def __init__(self):
+                self._store = _audit_store
+
+            async def create(self, order: AuditOrder) -> AuditOrder:
+                self._store[order.id] = order
+                return order
+
+            async def get_by_id(self, order_id: str) -> AuditOrder | None:
+                return self._store.get(order_id)
+
+            async def update(self, order: AuditOrder) -> AuditOrder:
+                order.update_time = datetime.now(UTC).replace(tzinfo=None)
+                self._store[order.id] = order
+                return order
+
+            async def list_orders(self, status=None, assignee=None, user_id=None, page=1, size=20):
+                orders = list(self._store.values())
+                if status:
+                    orders = [o for o in orders if o.status == status]
+                if assignee:
+                    orders = [o for o in orders if o.assignee == assignee]
+                if user_id:
+                    orders = [o for o in orders if o.user_id == user_id]
+                total = len(orders)
+                return orders[(page-1)*size:page*size], total
+
+            async def get_todo_list(self, assignee: str):
+                return [o for o in self._store.values()
+                        if o.assignee == assignee and o.status in [AuditStatus.PENDING.value, AuditStatus.IN_REVIEW.value]]
+
+            async def get_unassigned_pending(self):
+                return [o for o in self._store.values()
+                        if o.assignee is None and o.status == AuditStatus.PENDING.value]
+
+            async def get_stats(self):
+                status_counts = {s.value: 0 for s in AuditStatus}
+                level_counts = {l.value: 0 for l in AuditLevel}
+                for o in self._store.values():
+                    status_counts[o.status] = status_counts.get(o.status, 0) + 1
+                    level_counts[o.audit_level] = level_counts.get(o.audit_level, 0) + 1
+                return {
+                    "status_counts": status_counts,
+                    "level_counts": level_counts,
+                    "today_count": len(self._store),
+                }
+
+            async def delete(self, order_id: str) -> bool:
+                if order_id in self._store:
+                    del self._store[order_id]
+                    return True
+                return False
+
+        mock_repo = MockAuditRepository()
+
+        # 创建模拟的 get_session 和 get_repository
+        async def mock_get_session():
+            yield None
+
+        async def mock_get_repository():
+            return mock_repo
+
+        async def mock_get_service():
+            from behavior_audit.services.audit_service import AuditService
+            return AuditService(mock_repo)
+
+        # 使用依赖覆盖
+        from behavior_audit.routers.audit import get_service, get_repository
+        from behavior_audit.repositories.audit_repo import get_session
+
+        audit_app.dependency_overrides[get_session] = mock_get_session
+        audit_app.dependency_overrides[get_repository] = mock_get_repository
+        audit_app.dependency_overrides[get_service] = mock_get_service
 
         async with AsyncClient(
             transport=ASGITransport(app=audit_app),
@@ -283,9 +415,9 @@ async def audit_client() -> AsyncGenerator[AsyncClient, None]:
         ) as client:
             yield client
 
-        # 恢复原始状态
-        if original_redis:
-            audit_app.state.redis = original_redis
+        # 清理
+        audit_app.dependency_overrides.clear()
+        _audit_store.clear()
 
 
 # ============== 多服务集成上下文 ==============
