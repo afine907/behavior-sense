@@ -1,17 +1,15 @@
 """
 EventLogRepository 单元测试
 """
-import pytest
-from datetime import datetime, UTC
-from unittest.mock import MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import MagicMock
 
+import pytest
+from behavior_core.models.event import EventType, UserBehavior
 from behavior_logs.repositories.event_repo import (
-    EventLogRepository,
     EventLogQuery,
-    EventLogItem,
-    EventStats,
+    EventLogRepository,
 )
-from behavior_core.models.event import UserBehavior, EventType
 
 
 @pytest.fixture
