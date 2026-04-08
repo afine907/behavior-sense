@@ -88,6 +88,7 @@ members = [
     "libs/core",
     "packages/audit",
     "packages/insight",
+    "packages/logs",
     "packages/mock",
     "packages/rules",
     "packages/stream",
@@ -98,6 +99,7 @@ members = [
 behavior-core = { workspace = true }
 behavior-audit = { workspace = true }
 behavior-insight = { workspace = true }
+behavior-logs = { workspace = true }
 behavior-mock = { workspace = true }
 behavior-rules = { workspace = true }
 behavior-stream = { workspace = true }
@@ -107,6 +109,7 @@ packages = [
     "libs/core/src/behavior_core",
     "packages/audit/src/behavior_audit",
     "packages/insight/src/behavior_insight",
+    "packages/logs/src/behavior_logs",
     "packages/mock/src/behavior_mock",
     "packages/rules/src/behavior_rules",
     "packages/stream/src/behavior_stream",

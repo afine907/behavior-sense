@@ -64,3 +64,11 @@ export {
   type EventTrendPoint,
   type RecentActivityItem,
 } from './use-dashboard';
+
+// Logs hooks
+export {
+  logsKeys,
+  useEventLogs,
+  useEventLog,
+  useEventStats,
+} from './use-logs';

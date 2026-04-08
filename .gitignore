@@ -90,7 +90,7 @@ dmypy.json
 
 # Logs
 *.log
-logs/
+/logs/
 
 # Local data
 data/

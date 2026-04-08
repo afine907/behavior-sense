@@ -17,6 +17,7 @@ const API_DIRECT_URLS = {
   rules: process.env.NEXT_PUBLIC_API_RULES || 'http://localhost:8002',
   insight: process.env.NEXT_PUBLIC_API_INSIGHT || 'http://localhost:8003',
   audit: process.env.NEXT_PUBLIC_API_AUDIT || 'http://localhost:8004',
+  logs: process.env.NEXT_PUBLIC_API_LOGS || 'http://localhost:8005',
 } as const;
 
 // Custom error class for API errors
@@ -74,6 +75,7 @@ export const mockApi = createApiClient(getApiBaseUrl('mock', API_DIRECT_URLS.moc
 export const rulesApi = createApiClient(getApiBaseUrl('rules', API_DIRECT_URLS.rules));
 export const insightApi = createApiClient(getApiBaseUrl('insight', API_DIRECT_URLS.insight));
 export const auditApi = createApiClient(getApiBaseUrl('audit', API_DIRECT_URLS.audit));
+export const logsApi = createApiClient(getApiBaseUrl('logs', API_DIRECT_URLS.logs));
 
 // Re-export types
 export type { KyInstance, Options };
