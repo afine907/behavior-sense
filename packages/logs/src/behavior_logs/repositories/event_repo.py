@@ -179,8 +179,8 @@ class EventLogRepository:
 
         where_clause = " AND ".join(conditions) if conditions else "1=1"
         # Use whitelist for ORDER BY direction to prevent SQL injection
-        ORDER_DIRECTIONS = {"asc": "ASC", "desc": "DESC"}
-        order_dir = ORDER_DIRECTIONS.get(query.sort_order.lower(), "DESC")
+        order_directions = {"asc": "ASC", "desc": "DESC"}
+        order_dir = order_directions.get(query.sort_order.lower(), "DESC")
         offset = (query.page - 1) * query.size
 
         # 查询总数
