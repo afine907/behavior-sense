@@ -13,6 +13,7 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -34,6 +35,11 @@ const navItems: NavItemConfig[] = [
     href: '/mock',
     icon: Sparkles,
     label: 'Event Simulation',
+  },
+  {
+    href: '/logs',
+    icon: FileText,
+    label: 'Event Logs',
   },
   {
     href: '/rules',

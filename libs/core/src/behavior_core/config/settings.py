@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     rules_port: int = 8002
     insight_port: int = 8003
     audit_port: int = 8004
+    logs_port: int = 8005
 
     @field_validator(
         "postgres_password", "clickhouse_password", "es_password", "redis_password",

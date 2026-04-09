@@ -8,6 +8,7 @@ from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import clickhouse_connect
 import orjson
 import pulsar
 from behavior_core.config.settings import get_settings
@@ -94,6 +95,9 @@ class StreamProcessor:
         self._alert_producer: pulsar.Producer | None = None
         self._agg_producer: pulsar.Producer | None = None
 
+        # ClickHouse 客户端（用于事件持久化）
+        self._ch_client: clickhouse_connect.driver.Client | None = None
+
         # 聚合状态
         self._window_data: dict[str, dict[str, Any]] = defaultdict(lambda: {
             "events": [],
@@ -135,6 +139,19 @@ class StreamProcessor:
                 settings.pulsar_topic("aggregation-result")
             )
 
+            # 初始化 ClickHouse 客户端
+            try:
+                self._ch_client = clickhouse_connect.get_client(
+                    host=settings.clickhouse_host,
+                    port=settings.clickhouse_port,
+                    username=settings.clickhouse_user,
+                    password=settings.clickhouse_password.get_secret_value(),
+                    database=settings.clickhouse_database,
+                )
+                logger.info("clickhouse_client_initialized")
+            except Exception as e:
+                logger.warning("clickhouse_client_init_failed", error=str(e))
+
             # 启动定时任务
             self._tasks = [
                 asyncio.create_task(self._aggregation_timer()),
@@ -161,12 +178,19 @@ class StreamProcessor:
         if self._client:
             self._client.close()
 
+        if self._ch_client:
+            self._ch_client.close()
+            logger.info("clickhouse_client_closed")
+
         logger.info("Processor stopped")
 
     async def process(self, event_data: dict[str, Any]) -> None:
         """处理事件"""
         try:
             event = UserBehavior(**event_data)
+
+            # 写入 ClickHouse
+            await self._write_to_clickhouse(event)
 
             # 聚合处理
             await self._process_aggregation(event_data)
@@ -180,6 +204,52 @@ class StreamProcessor:
 
         except Exception as e:
             logger.error("Failed to process event", error=str(e))
+
+    async def _write_to_clickhouse(self, event: UserBehavior) -> None:
+        """写入事件到 ClickHouse"""
+        if not self._ch_client:
+            return
+
+        try:
+            event_type_value = (
+                event.event_type.value
+                if hasattr(event.event_type, "value")
+                else str(event.event_type)
+            )
+
+            row = [
+                event.event_id,
+                event.timestamp.date(),
+                event.user_id,
+                event_type_value,
+                event.timestamp,
+                event.session_id or "",
+                event.page_url or "",
+                event.referrer or "",
+                event.user_agent or "",
+                event.ip_address or "",
+                orjson.dumps(event.properties).decode(),
+            ]
+
+            self._ch_client.insert(
+                "event_logs",
+                [row],
+                column_names=[
+                    "event_id",
+                    "event_date",
+                    "user_id",
+                    "event_type",
+                    "timestamp",
+                    "session_id",
+                    "page_url",
+                    "referrer",
+                    "user_agent",
+                    "ip_address",
+                    "properties",
+                ],
+            )
+        except Exception as e:
+            logger.error("failed_to_write_clickhouse", error=str(e))
 
     # ==================== 聚合逻辑 ====================
 
