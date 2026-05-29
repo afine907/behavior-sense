@@ -1,33 +1,76 @@
 """
-Token消耗模型
+Token consumption model — tracks LLM token usage, costs, and cache efficiency.
 """
-from pydantic import BaseModel, ConfigDict, model_validator
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TokenUsage(BaseModel):
-    """Token消耗模型"""
-    model_config = ConfigDict(use_enum_values=True)
+    """Token consumption model with automatic cost estimation and cache metrics."""
 
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    total_tokens: int = 0
-    cached_tokens: int = 0  # prompt cache hits
-    model_name: str | None = None  # e.g., "gpt-4", "claude-3-opus"
-    cost_usd: float = 0.0
-    cache_hit_ratio: float = 0.0  # 0.0-1.0
+    model_config = ConfigDict(
+        use_enum_values=True,
+        validate_assignment=True,
+        json_encoders={datetime: lambda v: v.isoformat()},
+    )
+
+    prompt_tokens: int = Field(
+        default=0, ge=0, description="Number of tokens in the prompt (input)"
+    )
+    completion_tokens: int = Field(
+        default=0, ge=0, description="Number of tokens in the completion (output)"
+    )
+    total_tokens: int = Field(
+        default=0, ge=0, description="Total tokens consumed (prompt + completion)"
+    )
+    cached_tokens: int = Field(
+        default=0, ge=0, description="Number of prompt tokens served from cache"
+    )
+    model_name: str | None = Field(
+        default=None,
+        max_length=256,
+        description="Name of the LLM model (e.g., 'gpt-4', 'claude-3-opus')",
+    )
+    cost_usd: float = Field(
+        default=0.0, ge=0, description="Actual cost in USD for this request"
+    )
+    cache_hit_ratio: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of prompt tokens served from cache (0.0 to 1.0)",
+    )
 
     @property
     def estimated_cost(self) -> float:
-        """Estimate cost based on token counts if cost_usd not set"""
+        """Estimate cost based on token counts if cost_usd not set."""
         if self.cost_usd > 0:
             return self.cost_usd
         # Rough estimate: $0.01 per 1K tokens for input, $0.03 per 1K for output
-        return (self.prompt_tokens * 0.00001 + self.completion_tokens * 0.00003)
+        return self.prompt_tokens * 0.00001 + self.completion_tokens * 0.00003
 
-    @model_validator(mode='after')
-    def compute_total(self) -> 'TokenUsage':
+    @field_validator("model_name")
+    @classmethod
+    def normalize_model_name(cls, v: str | None) -> str | None:
+        """Convert empty/whitespace-only strings to None."""
+        if v is not None and not v.strip():
+            return None
+        return v
+
+    @model_validator(mode="after")
+    def compute_total_and_cache_ratio(self) -> "TokenUsage":
+        """Auto-compute total_tokens and cache_hit_ratio; validate cached_tokens bounds."""
         if self.total_tokens == 0:
             self.total_tokens = self.prompt_tokens + self.completion_tokens
+        if self.cached_tokens > self.prompt_tokens:
+            raise ValueError(
+                f"cached_tokens ({self.cached_tokens}) cannot exceed "
+                f"prompt_tokens ({self.prompt_tokens})"
+            )
         if self.prompt_tokens > 0 and self.cached_tokens > 0:
-            self.cache_hit_ratio = self.cached_tokens / self.prompt_tokens
+            computed_ratio = self.cached_tokens / self.prompt_tokens
+            # Only update if the user did not explicitly set a non-zero value
+            if self.cache_hit_ratio == 0.0:
+                self.cache_hit_ratio = round(computed_ratio, 4)
         return self

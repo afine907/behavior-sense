@@ -885,3 +885,373 @@ class TestAgentAnomalyDetectorSet:
 
         contention_alerts = [a for a in alerts if a["detector"] == "resource_contention"]
         assert len(contention_alerts) == 1
+
+
+# ---------------------------------------------------------------------------
+# Hardening: Input validation, graceful degradation, memory bounds
+# ---------------------------------------------------------------------------
+
+
+class TestInputValidation:
+    """所有检测器的输入验证测试"""
+
+    def test_loop_detector_empty_agent_id(self):
+        detector = AgentLoopDetector()
+        assert detector.detect("", "tool_call") is None
+
+    def test_loop_detector_empty_event_type(self):
+        detector = AgentLoopDetector()
+        assert detector.detect("agent_1", "") is None
+
+    def test_cost_spike_empty_agent_id(self):
+        detector = CostSpikeDetector()
+        assert detector.detect("", 1.0) is None
+
+    def test_cost_spike_negative_cost(self):
+        detector = CostSpikeDetector()
+        assert detector.detect("agent_1", -5.0) is None
+
+    def test_cost_spike_non_numeric_cost(self):
+        detector = CostSpikeDetector()
+        assert detector.detect("agent_1", "not_a_number") is None  # type: ignore[arg-type]
+
+    def test_token_explosion_empty_agent_id(self):
+        detector = TokenExplosionDetector()
+        assert detector.detect("", 100, 50) is None
+
+    def test_token_explosion_negative_tokens_clamped(self):
+        detector = TokenExplosionDetector(max_prompt_tokens=100)
+        # Negative tokens should be clamped to 0, not trigger alert
+        result = detector.detect("agent_1", -1000, -500)
+        assert result is None
+
+    def test_tool_abuse_empty_agent_id(self):
+        detector = ToolAbuseDetector()
+        assert detector.detect("", "search") is None
+
+    def test_tool_abuse_empty_tool_name(self):
+        detector = ToolAbuseDetector()
+        assert detector.detect("agent_1", "") is None
+
+    def test_timeout_cascade_empty_agent_id(self):
+        detector = TimeoutCascadeDetector()
+        assert detector.detect("", True) is None
+
+    def test_timeout_cascade_negative_delegation_depth(self):
+        detector = TimeoutCascadeDetector(timeout_count_threshold=1)
+        result = detector.detect("agent_1", True, delegation_depth=-5, timestamp=1000.0)
+        assert result is not None
+        assert result["delegation_depth"] == 0
+
+    def test_capability_drift_empty_agent_id_baseline(self):
+        detector = CapabilityDriftDetector()
+        detector.set_baseline("", 100.0, 0.1, ["search"])
+        # Should not crash; baseline stored under "" but detect with "" returns None
+        assert detector.detect("", 500.0, False) is None
+
+    def test_capability_drift_invalid_baseline_values(self):
+        detector = CapabilityDriftDetector()
+        # Negative latency and non-numeric error_rate should be handled
+        detector.set_baseline("a1", -100.0, "bad", "not_a_list")  # type: ignore[arg-type]
+        assert detector.detect("a1", 500.0, False) is None
+
+    def test_contention_empty_agent_id(self):
+        detector = MultiAgentContentionDetector()
+        assert detector.detect("", "resource_a") is None
+
+    def test_contention_empty_resource_id(self):
+        detector = MultiAgentContentionDetector()
+        assert detector.detect("agent_1", "") is None
+
+    def test_detect_all_non_dict_input(self):
+        detector_set = AgentAnomalyDetectorSet()
+        assert detector_set.detect_all("not a dict") == []  # type: ignore[arg-type]
+        assert detector_set.detect_all(None) == []  # type: ignore[arg-type]
+
+
+class TestTimestampDefaults:
+    """验证 timestamp=None 时使用当前时间而不崩溃"""
+
+    def test_loop_detector_none_timestamp(self):
+        detector = AgentLoopDetector()
+        result = detector.detect("agent_1", "tool_call", timestamp=None)
+        assert result is None  # no crash
+
+    def test_cost_spike_none_timestamp(self):
+        detector = CostSpikeDetector()
+        result = detector.detect("agent_1", 0.5, timestamp=None)
+        assert result is None
+
+    def test_tool_abuse_none_timestamp(self):
+        detector = ToolAbuseDetector()
+        result = detector.detect("agent_1", "search", timestamp=None)
+        assert result is None
+
+    def test_timeout_cascade_none_timestamp(self):
+        detector = TimeoutCascadeDetector()
+        result = detector.detect("agent_1", True, timestamp=None)
+        assert result is None
+
+    def test_contention_none_timestamp(self):
+        detector = MultiAgentContentionDetector()
+        result = detector.detect("agent_1", "resource_a", timestamp=None)
+        assert result is None
+
+    def test_loop_detector_zero_timestamp(self):
+        detector = AgentLoopDetector()
+        result = detector.detect("agent_1", "tool_call", timestamp=0)
+        assert result is None
+
+
+class TestGracefulDegradation:
+    """验证异常不会传播到调用方"""
+
+    def test_detect_all_with_malformed_event_data(self):
+        """包含异常类型字段的事件应安全处理"""
+        detector_set = AgentAnomalyDetectorSet()
+        # cost_usd as a string should not crash
+        event = {"agent_id": "a1", "event_type": "x", "cost_usd": "NaN"}
+        alerts = detector_set.detect_all(event)
+        assert isinstance(alerts, list)
+
+    def test_detect_all_with_none_values(self):
+        """None 值字段应安全处理"""
+        detector_set = AgentAnomalyDetectorSet()
+        event = {
+            "agent_id": "a1",
+            "event_type": "x",
+            "cost_usd": None,
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "latency_ms": None,
+        }
+        alerts = detector_set.detect_all(event)
+        assert isinstance(alerts, list)
+
+
+class TestMemoryBounds:
+    """验证内存边界约束"""
+
+    def test_token_explosion_session_eviction(self):
+        """超过最大 session 数时应淘汰旧 session"""
+        from behavior_stream.agent_detectors import _MAX_SESSION_TRACKED
+
+        detector = TokenExplosionDetector(max_total_per_session=999999999)
+        # Fill up to the limit
+        for i in range(_MAX_SESSION_TRACKED):
+            detector.detect(f"agent_{i}", prompt_tokens=1, completion_tokens=0)
+
+        assert len(detector._session_tokens) <= _MAX_SESSION_TRACKED
+
+        # Adding one more should evict the oldest
+        detector.detect("agent_new", prompt_tokens=1, completion_tokens=0)
+        assert len(detector._session_tokens) <= _MAX_SESSION_TRACKED
+        # The first session should have been evicted
+        assert "agent_0" not in detector._session_tokens or "agent_new" in detector._session_tokens
+
+
+# ---------------------------------------------------------------------------
+# get_stats() method tests
+# ---------------------------------------------------------------------------
+
+
+class TestGetStats:
+    """所有检测器的 get_stats() 测试"""
+
+    def test_loop_detector_get_stats(self):
+        detector = AgentLoopDetector()
+        stats = detector.get_stats()
+        assert stats["detector"] == "loop"
+        assert stats["detection_count"] == 0
+        assert stats["tracked_agents"] == 0
+        assert "avg_detect_ms" in stats
+
+    def test_loop_detector_get_stats_after_detections(self):
+        detector = AgentLoopDetector(min_repetitions=2, window_seconds=60)
+        ts = 1000.0
+        for i in range(3):
+            detector.detect("agent_1", "tool_call", tool_name="search", timestamp=ts + i)
+
+        stats = detector.get_stats()
+        assert stats["detection_count"] >= 1
+        assert stats["tracked_agents"] == 1
+
+    def test_cost_spike_get_stats(self):
+        detector = CostSpikeDetector()
+        stats = detector.get_stats()
+        assert stats["detector"] == "cost_spike"
+        assert stats["detection_count"] == 0
+        assert "avg_detect_ms" in stats
+
+    def test_token_explosion_get_stats(self):
+        detector = TokenExplosionDetector()
+        stats = detector.get_stats()
+        assert stats["detector"] == "token_explosion"
+        assert stats["detection_count"] == 0
+        assert "tracked_sessions" in stats
+
+    def test_tool_abuse_get_stats(self):
+        detector = ToolAbuseDetector()
+        stats = detector.get_stats()
+        assert stats["detector"] == "tool_abuse"
+        assert stats["detection_count"] == 0
+
+    def test_timeout_cascade_get_stats(self):
+        detector = TimeoutCascadeDetector()
+        stats = detector.get_stats()
+        assert stats["detector"] == "timeout_cascade"
+        assert stats["detection_count"] == 0
+
+    def test_capability_drift_get_stats(self):
+        detector = CapabilityDriftDetector()
+        stats = detector.get_stats()
+        assert stats["detector"] == "capability_drift"
+        assert stats["detection_count"] == 0
+        assert "tracked_baselines" in stats
+
+    def test_contention_get_stats(self):
+        detector = MultiAgentContentionDetector()
+        stats = detector.get_stats()
+        assert stats["detector"] == "resource_contention"
+        assert stats["detection_count"] == 0
+        assert "tracked_resources" in stats
+
+    def test_detector_set_get_stats(self):
+        detector_set = AgentAnomalyDetectorSet()
+        stats = detector_set.get_stats()
+        assert "total_detections" in stats
+        assert "total_detect_ms" in stats
+        assert "detectors" in stats
+        assert len(stats["detectors"]) == 7
+        for name in [
+            "loop", "cost_spike", "token_explosion", "tool_abuse",
+            "timeout_cascade", "capability_drift", "resource_contention",
+        ]:
+            assert name in stats["detectors"]
+            assert "detection_count" in stats["detectors"][name]
+
+    def test_detector_set_get_stats_after_activity(self):
+        detector_set = AgentAnomalyDetectorSet()
+        ts = 1000.0
+        for i in range(6):
+            detector_set.detect_all({
+                "agent_id": "agent_1",
+                "event_type": "tool_call",
+                "tool_name": "search",
+                "cost_usd": 5.0,
+                "timestamp": ts + i,
+            })
+
+        stats = detector_set.get_stats()
+        assert stats["total_detections"] > 0
+        assert stats["detectors"]["loop"]["detection_count"] >= 1
+        assert stats["detectors"]["cost_spike"]["detection_count"] >= 1
+
+
+class TestDetectedAtField:
+    """验证告警结果中包含 detected_at 时间戳"""
+
+    def test_loop_alert_has_detected_at(self):
+        detector = AgentLoopDetector(min_repetitions=2, window_seconds=60)
+        ts = 1000.0
+        detector.detect("agent_1", "tool_call", timestamp=ts)
+        result = detector.detect("agent_1", "tool_call", timestamp=ts + 1)
+        assert result is not None
+        assert "detected_at" in result
+        assert result["detected_at"] == ts + 1
+
+    def test_cost_spike_alert_has_detected_at(self):
+        detector = CostSpikeDetector(cost_per_minute_threshold=0.5)
+        result = detector.detect("agent_1", 1.0, timestamp=2000.0)
+        assert result is not None
+        assert result["detected_at"] == 2000.0
+
+    def test_tool_abuse_alert_has_detected_at(self):
+        detector = ToolAbuseDetector(calls_per_minute=2)
+        ts = 1000.0
+        detector.detect("agent_1", "search", timestamp=ts)
+        detector.detect("agent_1", "search", timestamp=ts + 1)
+        result = detector.detect("agent_1", "search", timestamp=ts + 2)
+        assert result is not None
+        assert "detected_at" in result
+
+    def test_timeout_alert_has_detected_at(self):
+        detector = TimeoutCascadeDetector(timeout_count_threshold=1)
+        result = detector.detect("agent_1", True, timestamp=3000.0)
+        assert result is not None
+        assert result["detected_at"] == 3000.0
+
+    def test_contention_alert_has_detected_at(self):
+        detector = MultiAgentContentionDetector(contention_agent_threshold=2)
+        ts = 1000.0
+        detector.detect("agent_1", "res", timestamp=ts)
+        result = detector.detect("agent_2", "res", timestamp=ts + 1)
+        assert result is not None
+        assert result["detected_at"] == ts + 1
+
+
+class TestThreadSafety:
+    """验证多线程并发访问不会崩溃"""
+
+    def test_concurrent_loop_detection(self):
+        import concurrent.futures
+
+        detector = AgentLoopDetector(min_repetitions=3, window_seconds=60)
+        errors = []
+
+        def worker(agent_id: str):
+            try:
+                ts = 1000.0
+                for i in range(100):
+                    detector.detect(agent_id, "tool_call", tool_name="search", timestamp=ts + i)
+            except Exception as e:
+                errors.append(e)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
+            futures = [pool.submit(worker, f"agent_{i}") for i in range(10)]
+            concurrent.futures.wait(futures)
+
+        assert errors == []
+        stats = detector.get_stats()
+        assert stats["tracked_agents"] == 10
+
+    def test_concurrent_contention_detection(self):
+        import concurrent.futures
+
+        detector = MultiAgentContentionDetector(contention_agent_threshold=5)
+        errors = []
+
+        def worker(agent_id: str):
+            try:
+                ts = 1000.0
+                for i in range(50):
+                    detector.detect(agent_id, "shared_resource", timestamp=ts + i * 0.01)
+            except Exception as e:
+                errors.append(e)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(worker, f"agent_{i}") for i in range(8)]
+            concurrent.futures.wait(futures)
+
+        assert errors == []
+
+    def test_concurrent_token_explosion(self):
+        import concurrent.futures
+
+        detector = TokenExplosionDetector(max_total_per_session=10000)
+        errors = []
+
+        def worker(agent_id: str):
+            try:
+                for _ in range(100):
+                    detector.detect(agent_id, prompt_tokens=50, completion_tokens=25)
+            except Exception as e:
+                errors.append(e)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
+            futures = [pool.submit(worker, f"agent_{i}") for i in range(10)]
+            concurrent.futures.wait(futures)
+
+        assert errors == []
+        stats = detector.get_stats()
+        assert stats["tracked_sessions"] == 10

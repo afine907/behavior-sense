@@ -255,10 +255,10 @@ class TestAgentMockAPI:
     @pytest.mark.asyncio
     async def test_list_scenarios(self, agent_mock_client: AsyncClient):
         """Test listing scenarios after creating one"""
-        # First create a scenario
+        # First create a scenario (duration_events minimum is 10)
         await agent_mock_client.post(
             "/api/agent-mock/scenario/start",
-            json={"scenario": "normal", "duration_events": 5},
+            json={"scenario": "normal", "duration_events": 10},
         )
 
         response = await agent_mock_client.get("/api/agent-mock/scenarios")
@@ -278,10 +278,10 @@ class TestAgentMockAPI:
     @pytest.mark.asyncio
     async def test_get_scenario_details(self, agent_mock_client: AsyncClient):
         """Test getting scenario details by ID"""
-        # Create a scenario
+        # Create a scenario (duration_events minimum is 10)
         create_response = await agent_mock_client.post(
             "/api/agent-mock/scenario/start",
-            json={"scenario": "normal", "duration_events": 5},
+            json={"scenario": "normal", "duration_events": 10},
         )
         scenario_id = create_response.json()["scenario_id"]
 
@@ -292,15 +292,15 @@ class TestAgentMockAPI:
         data = response.json()
         assert data["scenario_id"] == scenario_id
         assert data["scenario_type"] == "normal"
-        assert data["events_generated"] == 5
+        assert data["events_generated"] == 10
 
     @pytest.mark.asyncio
     async def test_delete_scenario(self, agent_mock_client: AsyncClient):
         """Test deleting a completed scenario"""
-        # Create a scenario
+        # Create a scenario (duration_events minimum is 10)
         create_response = await agent_mock_client.post(
             "/api/agent-mock/scenario/start",
-            json={"scenario": "normal", "duration_events": 5},
+            json={"scenario": "normal", "duration_events": 10},
         )
         scenario_id = create_response.json()["scenario_id"]
 
