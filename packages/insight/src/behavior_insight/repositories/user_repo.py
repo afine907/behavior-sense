@@ -315,7 +315,7 @@ async def init_database(database_url: str) -> async_sessionmaker[AsyncSession]:
     Returns:
         异步会话工厂
     """
-    from behavior_insight.repositories.agent_repo import Base as AgentBase
+    from behavior_insight.models.agent_db import Base as AgentBase
 
     engine = create_async_engine(database_url, echo=False, pool_pre_ping=True)
     async_session = async_sessionmaker(

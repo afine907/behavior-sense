@@ -6,94 +6,18 @@ from datetime import UTC, datetime
 from typing import Any
 
 from behavior_core.utils.logging import get_logger
-from sqlalchemy import (
-    JSON,
-    Column,
-    DateTime,
-    Float,
-    Integer,
-    String,
-    delete,
-    func,
-    select,
-)
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import declarative_base
+
+from behavior_insight.models.agent_db import AgentProfileDB, AgentStatDB, AgentTagDB
 
 logger = get_logger(__name__)
-
-Base = declarative_base()
 
 
 def utcnow_naive() -> datetime:
     """返回无时区信息的 UTC 时间（用于数据库存储）"""
     return datetime.now(UTC).replace(tzinfo=None)
-
-
-class AgentProfileModel(Base):
-    """Agent画像数据表模型"""
-    __tablename__ = "agent_profiles"
-
-    agent_id = Column(String(64), primary_key=True)
-    agent_name = Column(String(128), nullable=True)
-    agent_type = Column(String(64), nullable=True)
-    model_name = Column(String(64), nullable=True)
-    framework = Column(String(64), nullable=True)
-    owner = Column(String(128), nullable=True)
-    status = Column(String(32), default="active")
-    safety_rating = Column(String(32), default="standard")
-    cost_tier = Column(String(32), default="standard")
-    capabilities = Column(JSON, default=list)
-    supported_tools = Column(JSON, default=list)
-    capability_scores = Column(JSON, default=dict)
-    risk_score = Column(Float, default=0.0)
-    create_time = Column(DateTime, default=utcnow_naive)
-    update_time = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
-    last_active = Column(DateTime, nullable=True)
-
-
-class AgentStatModel(Base):
-    """Agent统计数据表模型"""
-    __tablename__ = "agent_stats"
-
-    agent_id = Column(String(64), primary_key=True)
-    total_events = Column(Integer, default=0)
-    total_sessions = Column(Integer, default=0)
-    total_tasks = Column(Integer, default=0)
-    total_tool_calls = Column(Integer, default=0)
-    total_llm_calls = Column(Integer, default=0)
-    total_tokens = Column(Integer, default=0)
-    total_cost_usd = Column(Float, default=0.0)
-    avg_latency_ms = Column(Float, default=0.0)
-    success_rate = Column(Float, default=0.0)
-    error_rate = Column(Float, default=0.0)
-    p95_latency_ms = Column(Float, default=0.0)
-    p99_latency_ms = Column(Float, default=0.0)
-    timeout_rate = Column(Float, default=0.0)
-    cost_by_model = Column(JSON, default=dict)
-    cost_by_tool = Column(JSON, default=dict)
-    events_1d = Column(Integer, default=0)
-    events_7d = Column(Integer, default=0)
-    tokens_1d = Column(Integer, default=0)
-    tokens_7d = Column(Integer, default=0)
-    cost_1d = Column(Float, default=0.0)
-    cost_7d = Column(Float, default=0.0)
-    cost_30d = Column(Float, default=0.0)
-    update_time = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
-
-
-class AgentTagModel(Base):
-    """Agent标签数据表模型"""
-    __tablename__ = "agent_tags"
-
-    agent_id = Column(String(64), primary_key=True)
-    tag_name = Column(String(128), primary_key=True)
-    tag_value = Column(String(512), default="")
-    source = Column(String(32), default="AUTO")
-    confidence = Column(Float, default=1.0)
-    create_time = Column(DateTime, default=utcnow_naive)
-    update_time = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
 
 class AgentRepository:
@@ -132,15 +56,15 @@ class AgentRepository:
             (agent列表, 总数) 元组
         """
         # 构建查询
-        stmt = select(AgentProfileModel)
-        count_stmt = select(func.count(AgentProfileModel.agent_id))
+        stmt = select(AgentProfileDB)
+        count_stmt = select(func.count(AgentProfileDB.agent_id))
 
         if agent_type:
-            stmt = stmt.where(AgentProfileModel.agent_type == agent_type)
-            count_stmt = count_stmt.where(AgentProfileModel.agent_type == agent_type)
+            stmt = stmt.where(AgentProfileDB.agent_type == agent_type)
+            count_stmt = count_stmt.where(AgentProfileDB.agent_type == agent_type)
         if status:
-            stmt = stmt.where(AgentProfileModel.status == status)
-            count_stmt = count_stmt.where(AgentProfileModel.status == status)
+            stmt = stmt.where(AgentProfileDB.status == status)
+            count_stmt = count_stmt.where(AgentProfileDB.status == status)
 
         # 获取总数
         count_result = await self._session.execute(count_stmt)
@@ -165,7 +89,7 @@ class AgentRepository:
         Returns:
             Agent画像字典，如果不存在则返回 None
         """
-        stmt = select(AgentProfileModel).where(AgentProfileModel.agent_id == agent_id)
+        stmt = select(AgentProfileDB).where(AgentProfileDB.agent_id == agent_id)
         result = await self._session.execute(stmt)
         agent = result.scalar_one_or_none()
 
@@ -192,7 +116,7 @@ class AgentRepository:
         now = utcnow_naive()
         update_data = {**profile_data, "update_time": now}
 
-        stmt = pg_insert(AgentProfileModel).values(
+        stmt = pg_insert(AgentProfileDB).values(
             agent_id=agent_id,
             **update_data,
             create_time=now,
@@ -219,17 +143,17 @@ class AgentRepository:
         """
         # 删除标签
         await self._session.execute(
-            delete(AgentTagModel).where(AgentTagModel.agent_id == agent_id)
+            delete(AgentTagDB).where(AgentTagDB.agent_id == agent_id)
         )
 
         # 删除统计
         await self._session.execute(
-            delete(AgentStatModel).where(AgentStatModel.agent_id == agent_id)
+            delete(AgentStatDB).where(AgentStatDB.agent_id == agent_id)
         )
 
         # 删除画像
         result = await self._session.execute(
-            delete(AgentProfileModel).where(AgentProfileModel.agent_id == agent_id)
+            delete(AgentProfileDB).where(AgentProfileDB.agent_id == agent_id)
         )
 
         await self._session.commit()
@@ -254,7 +178,7 @@ class AgentRepository:
         Returns:
             Agent统计字典，如果不存在则返回 None
         """
-        stmt = select(AgentStatModel).where(AgentStatModel.agent_id == agent_id)
+        stmt = select(AgentStatDB).where(AgentStatDB.agent_id == agent_id)
         result = await self._session.execute(stmt)
         stat = result.scalar_one_or_none()
 
@@ -281,7 +205,7 @@ class AgentRepository:
         now = utcnow_naive()
         update_data = {**stats_data, "update_time": now}
 
-        stmt = pg_insert(AgentStatModel).values(
+        stmt = pg_insert(AgentStatDB).values(
             agent_id=agent_id,
             **update_data,
         )
@@ -309,7 +233,7 @@ class AgentRepository:
         Returns:
             标签字典 {tag_name: {value, source, confidence, timestamp}}
         """
-        stmt = select(AgentTagModel).where(AgentTagModel.agent_id == agent_id)
+        stmt = select(AgentTagDB).where(AgentTagDB.agent_id == agent_id)
         result = await self._session.execute(stmt)
         tags = result.scalars().all()
 
@@ -342,7 +266,7 @@ class AgentRepository:
             confidence: 置信度
         """
         now = utcnow_naive()
-        stmt = pg_insert(AgentTagModel).values(
+        stmt = pg_insert(AgentTagDB).values(
             agent_id=agent_id,
             tag_name=tag_name,
             tag_value=tag_value,
@@ -376,9 +300,9 @@ class AgentRepository:
             是否成功删除
         """
         result = await self._session.execute(
-            delete(AgentTagModel).where(
-                AgentTagModel.agent_id == agent_id,
-                AgentTagModel.tag_name == tag_name,
+            delete(AgentTagDB).where(
+                AgentTagDB.agent_id == agent_id,
+                AgentTagDB.tag_name == tag_name,
             )
         )
         await self._session.commit()
@@ -404,9 +328,9 @@ class AgentRepository:
         Returns:
             匹配的Agent列表
         """
-        stmt = select(AgentTagModel).where(AgentTagModel.tag_name == tag_name)
+        stmt = select(AgentTagDB).where(AgentTagDB.tag_name == tag_name)
         if tag_value is not None:
-            stmt = stmt.where(AgentTagModel.tag_value == tag_value)
+            stmt = stmt.where(AgentTagDB.tag_value == tag_value)
 
         result = await self._session.execute(stmt)
         tags = result.scalars().all()
@@ -436,22 +360,22 @@ class AgentRepository:
             概览统计数据
         """
         # 总数和活跃数
-        total_stmt = select(func.count(AgentProfileModel.agent_id))
+        total_stmt = select(func.count(AgentProfileDB.agent_id))
         total_result = await self._session.execute(total_stmt)
         total_agents = total_result.scalar() or 0
 
-        active_stmt = select(func.count(AgentProfileModel.agent_id)).where(
-            AgentProfileModel.status == "active"
+        active_stmt = select(func.count(AgentProfileDB.agent_id)).where(
+            AgentProfileDB.status == "active"
         )
         active_result = await self._session.execute(active_stmt)
         active_agents = active_result.scalar() or 0
 
         # 统计汇总
         stats_stmt = select(
-            func.coalesce(func.sum(AgentStatModel.total_cost_usd), 0.0),
-            func.coalesce(func.sum(AgentStatModel.total_events), 0),
-            func.coalesce(func.sum(AgentStatModel.total_tokens), 0),
-            func.coalesce(func.avg(AgentStatModel.success_rate), 0.0),
+            func.coalesce(func.sum(AgentStatDB.total_cost_usd), 0.0),
+            func.coalesce(func.sum(AgentStatDB.total_events), 0),
+            func.coalesce(func.sum(AgentStatDB.total_tokens), 0),
+            func.coalesce(func.avg(AgentStatDB.success_rate), 0.0),
         )
         stats_result = await self._session.execute(stats_stmt)
         row = stats_result.one()
@@ -474,30 +398,24 @@ class AgentRepository:
         """
         # 按Agent统计
         agent_stmt = select(
-            AgentStatModel.agent_id,
-            AgentStatModel.total_cost_usd,
-            AgentStatModel.cost_by_model,
+            AgentStatDB.agent_id,
+            AgentStatDB.total_cost_usd,
         )
         result = await self._session.execute(agent_stmt)
         rows = result.all()
 
         by_agent: dict[str, float] = {}
-        by_model: dict[str, float] = {}
         total_cost = 0.0
 
-        for agent_id, cost, cost_models in rows:
+        for agent_id, cost in rows:
             cost = cost or 0.0
             by_agent[agent_id] = cost
             total_cost += cost
 
-            if cost_models:
-                for model, model_cost in cost_models.items():
-                    by_model[model] = by_model.get(model, 0) + model_cost
-
         return {
             "total_cost_usd": round(total_cost, 2),
             "by_agent": by_agent,
-            "by_model": by_model,
+            "by_model": {},
         }
 
     async def get_agent_comparison(
@@ -516,7 +434,7 @@ class AgentRepository:
             对比结果
         """
         # 获取所有Agent的统计数据
-        stmt = select(AgentStatModel).where(AgentStatModel.agent_id.in_(agent_ids))
+        stmt = select(AgentStatDB).where(AgentStatDB.agent_id.in_(agent_ids))
         result = await self._session.execute(stmt)
         stats = {s.agent_id: self._stat_to_dict(s) for s in result.scalars().all()}
 
@@ -567,8 +485,8 @@ class AgentRepository:
     # ============================================================
 
     @staticmethod
-    def _profile_to_dict(agent: AgentProfileModel) -> dict[str, Any]:
-        """将AgentProfileModel转换为字典"""
+    def _profile_to_dict(agent: AgentProfileDB) -> dict[str, Any]:
+        """将AgentProfileDB转换为字典"""
         return {
             "agent_id": agent.agent_id,
             "agent_name": agent.agent_name,
@@ -581,7 +499,7 @@ class AgentRepository:
             "cost_tier": agent.cost_tier or "standard",
             "capabilities": agent.capabilities or [],
             "supported_tools": agent.supported_tools or [],
-            "capability_scores": agent.capability_scores or {},
+            "capability_scores": {},
             "risk_score": agent.risk_score or 0.0,
             "create_time": agent.create_time,
             "update_time": agent.update_time,
@@ -589,8 +507,8 @@ class AgentRepository:
         }
 
     @staticmethod
-    def _stat_to_dict(stat: AgentStatModel) -> dict[str, Any]:
-        """将AgentStatModel转换为字典"""
+    def _stat_to_dict(stat: AgentStatDB) -> dict[str, Any]:
+        """将AgentStatDB转换为字典"""
         return {
             "agent_id": stat.agent_id,
             "total_events": stat.total_events or 0,
@@ -604,10 +522,10 @@ class AgentRepository:
             "success_rate": stat.success_rate or 0.0,
             "error_rate": stat.error_rate or 0.0,
             "p95_latency_ms": stat.p95_latency_ms or 0.0,
-            "p99_latency_ms": stat.p99_latency_ms or 0.0,
+            "p99_latency_ms": 0.0,
             "timeout_rate": stat.timeout_rate or 0.0,
-            "cost_by_model": stat.cost_by_model or {},
-            "cost_by_tool": stat.cost_by_tool or {},
+            "cost_by_model": {},
+            "cost_by_tool": {},
             "events_1d": stat.events_1d or 0,
             "events_7d": stat.events_7d or 0,
             "tokens_1d": stat.tokens_1d or 0,

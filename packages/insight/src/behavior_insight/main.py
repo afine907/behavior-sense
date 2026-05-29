@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from behavior_insight.agent_advanced_router import router as agent_advanced_router
 from behavior_insight.agent_router import router as agent_router
 from behavior_insight.repositories.user_repo import UserRepository, init_database
 from behavior_insight.routers import profile, tags
@@ -145,6 +146,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(tags.router)
 app.include_router(profile.router)
 app.include_router(agent_router)
+app.include_router(agent_advanced_router)
 
 
 @app.get("/health", response_model=HealthResponse)
