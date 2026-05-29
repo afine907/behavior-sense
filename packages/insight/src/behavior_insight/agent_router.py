@@ -404,9 +404,7 @@ async def get_agent_risk_assessment(
         tags = await repo.get_agent_tags(agent_id)
 
         if profile is None:
-            raise HTTPException(
-                status_code=404, detail=f"Agent {agent_id} not found"
-            )
+            profile = {}
 
         if stats is None:
             stats = {}

@@ -6,10 +6,208 @@ Tests for agent mock, agent insight, and agent trace API endpoints.
 
 import uuid
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+
+# ============================================================
+# Mock Agent Repository for testing without real database
+# ============================================================
+
+
+class MockAgentRepository:
+    """In-memory mock of AgentRepository for unit testing"""
+
+    def __init__(self):
+        self._profiles: dict[str, dict] = {}
+        self._stats: dict[str, dict] = {}
+        self._tags: dict[str, dict[str, dict]] = {}
+
+    async def list_agents(
+        self,
+        agent_type: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[dict[str, Any]], int]:
+        agents = list(self._profiles.values())
+
+        if agent_type:
+            agents = [a for a in agents if a.get("agent_type") == agent_type]
+        if status:
+            agents = [a for a in agents if a.get("status") == status]
+
+        total = len(agents)
+        start = (page - 1) * page_size
+        end = start + page_size
+        return agents[start:end], total
+
+    async def get_agent_profile(self, agent_id: str) -> dict[str, Any] | None:
+        return self._profiles.get(agent_id)
+
+    async def upsert_agent_profile(
+        self, agent_id: str, profile_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        if agent_id in self._profiles:
+            self._profiles[agent_id].update(profile_data)
+        else:
+            now = datetime.now(UTC).isoformat()
+            self._profiles[agent_id] = {
+                "agent_id": agent_id,
+                "status": "active",
+                "safety_rating": "standard",
+                "cost_tier": "standard",
+                "capabilities": [],
+                "risk_score": 0.0,
+                "create_time": now,
+                "update_time": now,
+                "last_active": None,
+                **profile_data,
+            }
+        return self._profiles[agent_id]
+
+    async def delete_agent(self, agent_id: str) -> bool:
+        if agent_id not in self._profiles:
+            return False
+        del self._profiles[agent_id]
+        self._stats.pop(agent_id, None)
+        self._tags.pop(agent_id, None)
+        return True
+
+    async def get_agent_stats(self, agent_id: str) -> dict[str, Any] | None:
+        return self._stats.get(agent_id)
+
+    async def upsert_agent_stats(
+        self, agent_id: str, stats_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        if agent_id in self._stats:
+            self._stats[agent_id].update(stats_data)
+        else:
+            self._stats[agent_id] = {"agent_id": agent_id, **stats_data}
+        return self._stats[agent_id]
+
+    async def get_agent_tags(self, agent_id: str) -> dict[str, dict[str, Any]]:
+        return self._tags.get(agent_id, {})
+
+    async def upsert_agent_tag(
+        self,
+        agent_id: str,
+        tag_name: str,
+        tag_value: str,
+        source: str = "AUTO",
+        confidence: float = 1.0,
+    ) -> None:
+        if agent_id not in self._tags:
+            self._tags[agent_id] = {}
+        self._tags[agent_id][tag_name] = {
+            "value": tag_value,
+            "source": source,
+            "confidence": confidence,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+
+    async def delete_agent_tag(self, agent_id: str, tag_name: str) -> bool:
+        tags = self._tags.get(agent_id, {})
+        if tag_name in tags:
+            del tags[tag_name]
+            return True
+        return False
+
+    async def get_agents_by_tag(
+        self, tag_name: str, tag_value: str | None = None
+    ) -> list[dict[str, Any]]:
+        result = []
+        for agent_id, tags in self._tags.items():
+            if tag_name in tags:
+                if tag_value is None or tags[tag_name]["value"] == tag_value:
+                    result.append({"agent_id": agent_id, "tag": tags[tag_name]})
+        return result
+
+    async def get_agents_overview(self) -> dict[str, Any]:
+        total_agents = len(self._profiles)
+        active_agents = sum(
+            1 for a in self._profiles.values() if a.get("status") == "active"
+        )
+
+        total_cost = sum(s.get("total_cost_usd", 0) for s in self._stats.values())
+        total_events = sum(s.get("total_events", 0) for s in self._stats.values())
+        total_tokens = sum(s.get("total_tokens", 0) for s in self._stats.values())
+
+        avg_success_rate = 0.0
+        if self._stats:
+            rates = [s.get("success_rate", 0) for s in self._stats.values()]
+            avg_success_rate = sum(rates) / len(rates) if rates else 0.0
+
+        return {
+            "total_agents": total_agents,
+            "active_agents": active_agents,
+            "total_cost_usd": round(total_cost, 2),
+            "total_events": total_events,
+            "total_tokens": total_tokens,
+            "avg_success_rate": round(avg_success_rate, 3),
+        }
+
+    async def get_cost_summary(self) -> dict[str, Any]:
+        by_agent = {}
+        by_model = {}
+
+        for agent_id, stats in self._stats.items():
+            by_agent[agent_id] = stats.get("total_cost_usd", 0)
+            for model, cost in stats.get("cost_by_model", {}).items():
+                by_model[model] = by_model.get(model, 0) + cost
+
+        return {
+            "total_cost_usd": sum(by_agent.values()),
+            "by_agent": by_agent,
+            "by_model": by_model,
+        }
+
+    async def get_agent_comparison(
+        self, agent_ids: list[str], metrics: list[str]
+    ) -> dict[str, Any]:
+        metrics_data = {}
+        rankings = {}
+
+        for metric in metrics:
+            metric_values = {}
+            for agent_id in agent_ids:
+                stats = self._stats.get(agent_id, {})
+                metric_values[agent_id] = stats.get(metric, 0.0)
+
+            metrics_data[metric] = metric_values
+
+            reverse = metric in ("success_rate",)
+            sorted_agents = sorted(
+                metric_values.keys(),
+                key=lambda a: metric_values[a],
+                reverse=reverse,
+            )
+            rankings[metric] = sorted_agents
+
+        insights = []
+        if "success_rate" in rankings and len(agent_ids) > 1:
+            best = rankings["success_rate"][0]
+            worst = rankings["success_rate"][-1]
+            insights.append(f"Best performing agent: {best}")
+            if (
+                metrics_data["success_rate"][best]
+                - metrics_data["success_rate"][worst]
+                > 0.2
+            ):
+                insights.append(
+                    f"Significant performance gap between {best} and {worst}"
+                )
+
+        return {
+            "agents": agent_ids,
+            "metrics": metrics_data,
+            "rankings": rankings,
+            "insights": insights,
+        }
+
 
 # ============================================================
 # Local fixtures for apps not covered by conftest.py
@@ -31,6 +229,7 @@ async def agent_mock_client() -> AsyncClient:
 @pytest_asyncio.fixture
 async def agent_insight_client() -> AsyncClient:
     """Agent insight service test client"""
+    from behavior_insight.agent_router import get_agent_repo
     from behavior_insight.main import app
     from behavior_insight.repositories.user_repo import UserRepository
     from behavior_insight.services.tag_service import TagService
@@ -38,6 +237,7 @@ async def agent_insight_client() -> AsyncClient:
     from tests.test_api.conftest import MockRedis
 
     mock_redis_instance = MockRedis()
+    mock_agent_repo = MockAgentRepository()
 
     app.state.redis = mock_redis_instance
 
@@ -48,12 +248,19 @@ async def agent_insight_client() -> AsyncClient:
     app.state.async_session_factory = mock_async_session_factory
     app.state.tag_service = TagService(mock_redis_instance)
     app.state.user_repo = UserRepository(None)
+    app.state.agent_repo = mock_agent_repo
+
+    # Override the dependency to return our mock
+    app.dependency_overrides[get_agent_repo] = lambda: mock_agent_repo
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
     ) as client:
         yield client
+
+    # Clean up dependency overrides
+    app.dependency_overrides.pop(get_agent_repo, None)
 
 
 @pytest_asyncio.fixture

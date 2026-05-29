@@ -2,6 +2,7 @@
 BehaviorSense Insight 服务
 洞察分析服务 - 标签管理、用户画像、分析报表
 """
+
 import os
 from contextlib import asynccontextmanager
 
@@ -30,6 +31,7 @@ logger = get_logger(__name__)
 
 class HealthResponse(BaseModel):
     """健康检查响应"""
+
     status: str
     service: str
     redis: str

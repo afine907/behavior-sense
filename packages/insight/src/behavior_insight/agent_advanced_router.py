@@ -7,17 +7,18 @@ Real implementations using:
 - AgentGraphAnalyzer for dependency graph analysis
 - AgentRepository for database-backed stats, profiles, and tags
 """
-from datetime import UTC, datetime, timedelta
+
+from datetime import UTC, datetime
 from typing import Any
 
 from behavior_core.utils.logging import get_logger
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
+
 from behavior_insight.agent_graph import AgentGraphAnalyzer
 from behavior_insight.compliance_checker import AgentComplianceChecker
 from behavior_insight.optimization_engine import AgentOptimizationEngine
 from behavior_insight.repositories.agent_repo import AgentRepository
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 logger = get_logger(__name__)
 
@@ -84,69 +85,85 @@ def _detect_patterns_from_stats(
 
     error_rate = stats.get("error_rate", 0)
     if error_rate > 0.15:
-        patterns.append({
-            "name": "high_error_rate",
-            "confidence": min(1.0, error_rate / 0.5),
-            "description": f"Error rate {error_rate:.1%} exceeds normal threshold",
-            "category": "reliability",
-        })
+        patterns.append(
+            {
+                "name": "high_error_rate",
+                "confidence": min(1.0, error_rate / 0.5),
+                "description": f"Error rate {error_rate:.1%} exceeds normal threshold",
+                "category": "reliability",
+            }
+        )
 
     retry_tag = tags.get("retry_loop_detected", {})
     if retry_tag.get("value") == "true":
-        patterns.append({
-            "name": "error_recovery_loop",
-            "confidence": retry_tag.get("confidence", 0.8),
-            "description": "Agent is stuck in an error-recovery loop",
-            "category": "behavior",
-        })
+        patterns.append(
+            {
+                "name": "error_recovery_loop",
+                "confidence": retry_tag.get("confidence", 0.8),
+                "description": "Agent is stuck in an error-recovery loop",
+                "category": "behavior",
+            }
+        )
 
     total_tool_calls = stats.get("total_tool_calls", 0)
     total_events = stats.get("total_events", 1)
     if total_events > 0 and total_tool_calls / total_events > 0.7:
-        patterns.append({
-            "name": "sequential_tool_use",
-            "confidence": round(total_tool_calls / total_events, 2),
-            "description": "Agent predominantly uses tool calls in sequence",
-            "category": "behavior",
-        })
+        patterns.append(
+            {
+                "name": "sequential_tool_use",
+                "confidence": round(total_tool_calls / total_events, 2),
+                "description": "Agent predominantly uses tool calls in sequence",
+                "category": "behavior",
+            }
+        )
 
     cost_1d = stats.get("cost_1d", 0)
     cost_7d = stats.get("cost_7d", 0)
     if cost_7d > 0 and cost_1d > cost_7d / 3:
-        patterns.append({
-            "name": "cost_acceleration",
-            "confidence": min(1.0, cost_1d / (cost_7d / 7) / 2),
-            "description": "Daily cost is accelerating relative to weekly average",
-            "category": "cost",
-        })
+        patterns.append(
+            {
+                "name": "cost_acceleration",
+                "confidence": min(1.0, cost_1d / (cost_7d / 7) / 2),
+                "description": "Daily cost is accelerating relative to weekly average",
+                "category": "cost",
+            }
+        )
 
     p95_latency = stats.get("p95_latency_ms", 0)
     avg_latency = stats.get("avg_latency_ms", 0)
     if avg_latency > 0 and p95_latency > avg_latency * 5:
-        patterns.append({
-            "name": "latency_spike_pattern",
-            "confidence": min(1.0, p95_latency / (avg_latency * 10)),
-            "description": "P95 latency is significantly higher than average, indicating spike patterns",
-            "category": "performance",
-        })
+        patterns.append(
+            {
+                "name": "latency_spike_pattern",
+                "confidence": min(1.0, p95_latency / (avg_latency * 10)),
+                "description": (
+                    "P95 latency is significantly higher than average, indicating spike patterns"
+                ),
+                "category": "performance",
+            }
+        )
 
     timeout_rate = stats.get("timeout_rate", 0)
     if timeout_rate > 0.05:
-        patterns.append({
-            "name": "frequent_timeouts",
-            "confidence": min(1.0, timeout_rate / 0.2),
-            "description": f"Timeout rate {timeout_rate:.1%} indicates resource contention",
-            "category": "performance",
-        })
+        patterns.append(
+            {
+                "name": "frequent_timeouts",
+                "confidence": min(1.0, timeout_rate / 0.2),
+                "description": f"Timeout rate {timeout_rate:.1%} indicates resource contention",
+                "category": "performance",
+            }
+        )
 
     capability_drift = tags.get("capability_drifted", {})
     if capability_drift.get("value") == "true":
-        patterns.append({
-            "name": "capability_drift",
-            "confidence": capability_drift.get("confidence", 0.7),
-            "description": "Agent behavior has drifted from its declared capabilities",
-            "category": "safety",
-        })
+        patterns.append(
+            {
+                "name": "capability_drift",
+                "confidence": capability_drift.get("confidence", 0.7),
+                "description": "Agent behavior has drifted from its declared capabilities",
+                "category": "safety",
+            }
+        )
 
     return patterns
 
@@ -262,9 +279,7 @@ async def get_agent_baseline(
         avg_events_per_minute = round(events_1d / 1440, 2) if events_1d > 0 else 0
 
         # Derive tokens per event
-        avg_tokens_per_event = (
-            round(total_tokens / total_events, 0) if total_events > 0 else 0
-        )
+        avg_tokens_per_event = round(total_tokens / total_events, 0) if total_events > 0 else 0
 
         # Derive cost per hour from 1d cost
         cost_1d = stats.get("cost_1d", 0)
@@ -388,14 +403,16 @@ async def get_compliance_report(
         # Convert ComplianceResult objects to dicts
         results = []
         for r in report.results:
-            results.append({
-                "rule_id": r.rule_id,
-                "name": r.rule_name,
-                "status": r.status.value,
-                "message": r.message,
-                "details": r.details,
-                "checked_at": r.checked_at.isoformat(),
-            })
+            results.append(
+                {
+                    "rule_id": r.rule_id,
+                    "name": r.rule_name,
+                    "status": r.status.value,
+                    "message": r.message,
+                    "details": r.details,
+                    "checked_at": r.checked_at.isoformat(),
+                }
+            )
 
         return {
             "agent_id": report.agent_id,
@@ -555,14 +572,16 @@ async def get_all_anomaly_scores(
             else:
                 trend = "stable"
 
-            results.append({
-                "agent_id": agent_id,
-                "score": score,
-                "level": _score_to_level(score),
-                "trend": trend,
-                "error_rate": stats.get("error_rate", 0),
-                "timeout_rate": stats.get("timeout_rate", 0),
-            })
+            results.append(
+                {
+                    "agent_id": agent_id,
+                    "score": score,
+                    "level": _score_to_level(score),
+                    "trend": trend,
+                    "error_rate": stats.get("error_rate", 0),
+                    "timeout_rate": stats.get("timeout_rate", 0),
+                }
+            )
 
         # Sort by score descending (most anomalous first)
         results.sort(key=lambda x: x["score"], reverse=True)
@@ -612,27 +631,31 @@ async def get_agent_trends(
         # Previous period = the next larger window minus current
         trends: dict[str, dict[str, Any]] = {}
 
+        def _prev_from_larger_window(current: float, larger_key: str, divisor: float) -> float:
+            """Estimate previous period from a larger time window."""
+            larger = stats.get(larger_key, 0)
+            if larger > current:
+                return (larger - current) / divisor
+            return current
+
         if period_days <= 1:
             current_events = stats.get("events_1d", 0)
             current_tokens = stats.get("tokens_1d", 0)
             current_cost = stats.get("cost_1d", 0.0)
-            # Previous day approximation: use 7d average as baseline
-            prev_events = (stats.get("events_7d", 0) - current_events) / 6 if stats.get("events_7d", 0) > current_events else current_events
-            prev_tokens = (stats.get("tokens_7d", 0) - current_tokens) / 6 if stats.get("tokens_7d", 0) > current_tokens else current_tokens
-            prev_cost = (stats.get("cost_7d", 0) - current_cost) / 6 if stats.get("cost_7d", 0) > current_cost else current_cost
+            prev_events = _prev_from_larger_window(current_events, "events_7d", 6)
+            prev_tokens = _prev_from_larger_window(current_tokens, "tokens_7d", 6)
+            prev_cost = _prev_from_larger_window(current_cost, "cost_7d", 6)
         elif period_days <= 7:
             current_events = stats.get("events_7d", 0)
             current_tokens = stats.get("tokens_7d", 0)
             current_cost = stats.get("cost_7d", 0.0)
-            # Previous week approximation: use 30d data
-            prev_events = (stats.get("events_30d", 0) - current_events) / 3 if stats.get("events_30d", 0) > current_events else current_events
-            prev_tokens = (stats.get("tokens_30d", 0) - current_tokens) / 3 if stats.get("tokens_30d", 0) > current_tokens else current_tokens
-            prev_cost = (stats.get("cost_30d", 0) - current_cost) / 3 if stats.get("cost_30d", 0) > current_cost else current_cost
+            prev_events = _prev_from_larger_window(current_events, "events_30d", 3)
+            prev_tokens = _prev_from_larger_window(current_tokens, "tokens_30d", 3)
+            prev_cost = _prev_from_larger_window(current_cost, "cost_30d", 3)
         else:
             current_events = stats.get("events_30d", 0)
             current_tokens = stats.get("tokens_30d", 0)
             current_cost = stats.get("cost_30d", 0.0)
-            # No prior data available for 30d comparison
             prev_events = current_events
             prev_tokens = current_tokens
             prev_cost = current_cost
