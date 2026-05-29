@@ -75,6 +75,22 @@ Agent action → Stream processes → Rules match → Auto-tag / Flag for audit
 - **🔗 Multi-Agent Correlation** — Track causality chains across agent handoffs
 - **👥 Human-in-the-loop** — Built-in audit workflow for high-stakes agent decisions
 
+### 🏆 Why Not Langfuse / Phoenix / LangSmith?
+
+| Feature | BehaviorSense | Langfuse | Phoenix | LangSmith |
+|---------|---------------|----------|---------|-----------|
+| **Real-time Anomaly Detection** | ✅ 12 detectors | ❌ | 🔶 Basic | ❌ |
+| **Rule Engine** | ✅ AST-safe, hot-reload | ❌ | ❌ | ❌ |
+| **Cost Optimization** | ✅ Built-in suggestions | 🔶 Basic | 🔶 Basic | ✅ |
+| **Multi-Agent Graph** | ✅ Dependency analysis | ❌ | ❌ | ❌ |
+| **Behavior Replay** | ✅ Step-through | ❌ | ❌ | ❌ |
+| **Compliance Checking** | ✅ 8 rules | ❌ | ❌ | ❌ |
+| **Prompt Management** | ✅ Version control | ✅ | ❌ | ✅ |
+| **OTel Integration** | ✅ Native | ✅ | ✅ | ❌ |
+| **Framework Integrations** | ✅ LangChain, LlamaIndex, OpenAI | ✅ | ✅ | ✅ LangChain |
+| **Self-hosted** | ✅ MIT License | ✅ MIT | 🔶 Elastic 2.0 | ❌ SaaS only |
+| **License** | MIT | MIT | Elastic 2.0 | Proprietary |
+
 ---
 
 ## ✨ Features
