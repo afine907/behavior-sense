@@ -168,6 +168,20 @@ class BehaviorSenseClient:
         response.raise_for_status()
         return response.json()
 
+    async def get_agent_risk(self, agent_id: str) -> dict[str, Any]:
+        """获取Agent风险评估"""
+        client = await self._get_client()
+        response = await client.get(f"/api/agents/{agent_id}/risk")
+        response.raise_for_status()
+        return response.json()
+
+    async def get_agent_capabilities(self, agent_id: str) -> dict[str, Any]:
+        """获取Agent能力"""
+        client = await self._get_client()
+        response = await client.get(f"/api/agents/{agent_id}/capabilities")
+        response.raise_for_status()
+        return response.json()
+
     # ============================================================
     # Traces
     # ============================================================

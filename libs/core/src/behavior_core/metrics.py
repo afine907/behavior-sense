@@ -201,3 +201,68 @@ class AgentMetrics:
     def record_tokens(self, agent_id: str, tokens: int) -> None:
         """记录Token使用"""
         self.tokens_processed.inc(tokens)
+
+
+# Service info tracking
+_service_info: dict[str, str] = {}
+
+
+def set_service_info(name: str, version: str) -> None:
+    """设置服务信息（用于指标导出）"""
+    global _service_info
+    _service_info = {"name": name, "version": version}
+
+
+def get_service_info() -> dict[str, str]:
+    """获取服务信息"""
+    return dict(_service_info)
+
+
+def metrics_to_prometheus_string() -> str:
+    """将指标导出为Prometheus格式字符串"""
+    lines = []
+
+    # Service info
+    if _service_info:
+        lines.append(f'# HELP service_info Service information')
+        lines.append(f'# TYPE service_info gauge')
+        labels = ",".join(f'{k}="{v}"' for k, v in _service_info.items())
+        lines.append(f'service_info{{{labels}}} 1')
+        lines.append("")
+
+    # Counters
+    for key, counter in _metrics._counters.items():
+        labels = ""
+        if counter.labels:
+            label_str = ",".join(f'{k}="{v}"' for k, v in sorted(counter.labels.items()))
+            labels = f"{{{label_str}}}"
+        lines.append(f'# TYPE {counter.name} counter')
+        lines.append(f'{counter.name}{labels} {counter.value}')
+
+    # Gauges
+    for key, gauge in _metrics._gauges.items():
+        labels = ""
+        if gauge.labels:
+            label_str = ",".join(f'{k}="{v}"' for k, v in sorted(gauge.labels.items()))
+            labels = f"{{{label_str}}}"
+        lines.append(f'# TYPE {gauge.name} gauge')
+        lines.append(f'{gauge.name}{labels} {gauge.value}')
+
+    # Histograms
+    for key, histogram in _metrics._histograms.items():
+        labels = ""
+        if histogram.labels:
+            label_str = ",".join(f'{k}="{v}"' for k, v in sorted(histogram.labels.items()))
+            labels = f"{{{label_str}}}"
+        lines.append(f'# TYPE {histogram.name} histogram')
+        for bucket, count in sorted(histogram.counts.items()):
+            bucket_labels = f'le="{bucket}"'
+            if labels:
+                bucket_labels = f"{labels[:-1]},{bucket_labels}}}"
+            else:
+                bucket_labels = f"{{{bucket_labels}}}"
+            lines.append(f'{histogram.name}_bucket{bucket_labels} {count}')
+        lines.append(f'{histogram.name}_sum{labels} {histogram.sum_value}')
+        lines.append(f'{histogram.name}_count{labels} {histogram.count}')
+
+    return "\n".join(lines)
