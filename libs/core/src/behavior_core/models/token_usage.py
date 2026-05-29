@@ -61,8 +61,9 @@ class TokenUsage(BaseModel):
     @model_validator(mode="after")
     def compute_total_and_cache_ratio(self) -> "TokenUsage":
         """Auto-compute total_tokens and cache_hit_ratio; validate cached_tokens bounds."""
+        # Use __dict__ to bypass validate_assignment and avoid recursion
         if self.total_tokens == 0:
-            self.total_tokens = self.prompt_tokens + self.completion_tokens
+            self.__dict__["total_tokens"] = self.prompt_tokens + self.completion_tokens
         if self.cached_tokens > self.prompt_tokens:
             raise ValueError(
                 f"cached_tokens ({self.cached_tokens}) cannot exceed "
@@ -72,5 +73,5 @@ class TokenUsage(BaseModel):
             computed_ratio = self.cached_tokens / self.prompt_tokens
             # Only update if the user did not explicitly set a non-zero value
             if self.cache_hit_ratio == 0.0:
-                self.cache_hit_ratio = round(computed_ratio, 4)
+                self.__dict__["cache_hit_ratio"] = round(computed_ratio, 4)
         return self

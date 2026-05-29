@@ -134,7 +134,11 @@ class CostSpikeDetector:
                     "total_cost_usd": round(total_cost, 4),
                     "threshold": self.cost_per_minute_threshold,
                     "event_count": len(recent),
-                    "severity": "critical" if total_cost > self.cost_per_minute_threshold * 10 else "high",
+                    "severity": (
+                        "critical"
+                        if total_cost > self.cost_per_minute_threshold * 10
+                        else "high"
+                    ),
                     "detected_at": ts,
                 }
             return None
@@ -190,7 +194,9 @@ class TokenExplosionDetector:
 
             with self._lock:
                 # Evict oldest sessions if we hit the cap
-                if sid not in self._session_tokens and len(self._session_tokens) >= _MAX_SESSION_TRACKED:
+                is_new = sid not in self._session_tokens
+                at_cap = len(self._session_tokens) >= _MAX_SESSION_TRACKED
+                if is_new and at_cap:
                     evict_sid = self._session_order.popleft()
                     self._session_tokens.pop(evict_sid, None)
 
@@ -380,7 +386,11 @@ class TimeoutCascadeDetector:
                     "timeout_count": recent_timeouts,
                     "threshold": self.timeout_count_threshold,
                     "delegation_depth": delegation_depth,
-                    "severity": "critical" if delegation_depth >= self.cascade_depth_threshold else "high",
+                    "severity": (
+                        "critical"
+                        if delegation_depth >= self.cascade_depth_threshold
+                        else "high"
+                    ),
                     "detected_at": ts,
                 }
             return None

@@ -93,7 +93,7 @@ class TokenUsage(BaseModel):
     def compute_total_and_validate_cache(self) -> "TokenUsage":
         """Auto-compute total_tokens and validate cache token bounds."""
         if self.total_tokens == 0:
-            self.total_tokens = self.prompt_tokens + self.completion_tokens
+            self.__dict__["total_tokens"] = self.prompt_tokens + self.completion_tokens
         if self.cache_hit_tokens > self.prompt_tokens:
             raise ValueError(
                 f"cache_hit_tokens ({self.cache_hit_tokens}) cannot exceed "
