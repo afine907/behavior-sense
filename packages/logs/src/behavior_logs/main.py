@@ -10,6 +10,7 @@ from behavior_core.utils.logging import get_logger, setup_logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from behavior_logs.agent_trace_router import router as agent_trace_router
 from behavior_logs.routers.logs import router as logs_router
 
 settings = get_settings()
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
 
     # 路由
     app.include_router(logs_router)
+    app.include_router(agent_trace_router)
 
     # 根路径
     @app.get("/", tags=["root"])
