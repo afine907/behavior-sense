@@ -15,16 +15,16 @@ Welcome to the BehaviorSense project documentation.
 
 ## Project Overview
 
-**BehaviorSense** - User Behavior Stream Analytics Engine
+**BehaviorSense** - Real-time AI Agent Behavior Analytics Platform
 
-A real-time user behavior stream processing and analysis platform with sub-second latency.
+An open-source platform for monitoring, analyzing, and governing AI Agent behavior in real-time with 12 anomaly detectors.
 
 ### Data Flow
 
 ```
-Mock → Pulsar → Faust(Stream) → Rules → Insight
-                                     ↓
-                                  Audit (Manual Review)
+Agent Action → Pulsar → Stream Processing → Detection → Auto-tag / Audit
+     ↓              < 1 second           ↓
+  [Events] ────→ [12 Detectors] ────→ [Decision] ────→ [Action]
 ```
 
 ---
@@ -36,11 +36,12 @@ Mock → Pulsar → Faust(Stream) → Rules → Insight
 | Language | Python 3.11+ |
 | Package Manager | uv |
 | Web Framework | FastAPI |
-| Stream Processing | Faust |
+| Stream Processing | Pulsar Client |
 | Message Queue | Apache Pulsar |
 | Database | PostgreSQL |
 | Cache | Redis |
 | Analytics | ClickHouse |
+| Frontend | Next.js 14 |
 
 ---
 
@@ -49,24 +50,32 @@ Mock → Pulsar → Faust(Stream) → Rules → Insight
 ```
 behavior-sense/
 ├── libs/                     # Shared libraries
-│   └── core/                 # behavior-core
-│       └── src/behavior_core/
+│   ├── core/                 # behavior-core (models, config, security)
+│   ├── sdk/                  # Python SDK client
+│   └── integrations/         # Framework integrations
+│       ├── langchain/        # LangChain callback
+│       ├── llamaindex/       # LlamaIndex callback
+│       └── openai/           # OpenAI wrapper
 │
 ├── packages/                 # Microservices
-│   ├── audit/                # behavior-audit (:8004)
-│   ├── insight/              # behavior-insight (:8003)
-│   ├── mock/                 # behavior-mock (:8001)
-│   ├── rules/                # behavior-rules (:8002)
-│   └── stream/               # behavior-stream (Faust)
+│   ├── mock/                 # Agent event generator (:8001)
+│   ├── stream/               # Real-time stream processor
+│   │   └── agent_detectors.py  # 12 anomaly detectors
+│   ├── rules/                # Rule engine (:8002)
+│   ├── insight/              # Agent analytics (:8003)
+│   ├── audit/                # Audit workflow (:8004)
+│   └── logs/                 # Event logs (:8005)
 │
-├── apps/                     # Frontend apps (reserved)
-│   └── web/                  # Next.js
+├── apps/                     # Frontend apps
+│   └── web/                  # Next.js dashboard (:5143)
 │
 ├── infrastructure/           # Infrastructure configs
 │   └── docker/
 │
 ├── tests/                    # Test suites
-└── wiki/                     # Documentation
+├── docs/                     # Documentation
+├── examples/                 # SDK usage examples
+└── wiki/                     # This wiki
 ```
 
 ---
@@ -97,11 +106,12 @@ uv run pytest tests/
 
 ## Core Features
 
-1. **Mock** - Generate simulated user behavior events
-2. **Stream** - Real-time event processing with Faust
-3. **Rules** - Flexible rule engine with AST parsing
-4. **Insight** - User profiling and tag management
-5. **Audit** - Manual review workflow
+1. **Mock** - Generate simulated AI Agent events with 5 profiles
+2. **Stream** - Real-time processing with 12 anomaly detectors
+3. **Rules** - AST-safe rule engine with hot-reload
+4. **Insight** - Agent profiling, stats, and graph analysis
+5. **Audit** - Human-in-the-loop review workflow
+6. **Logs** - Event log retrieval and trace analysis
 
 ---
 
@@ -109,5 +119,6 @@ uv run pytest tests/
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Apache Pulsar](https://pulsar.apache.org/)
-- [Faust Stream Processing](https://faust-streaming.github.io/faust/)
+- [ClickHouse](https://clickhouse.com/)
 - [uv Package Manager](https://docs.astral.sh/uv/)
+- [Next.js](https://nextjs.org/)
