@@ -6,11 +6,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from llama_index.core.callbacks import CallbackManager
 from llama_index.core.callbacks.base import BaseCallbackHandler
 
 from behavior_core.models.agent_event import AgentBehavior, AgentEventType, AgentType
-from behavior_core.models.token_usage import TokenUsage
 
 
 def _utc_now() -> datetime:

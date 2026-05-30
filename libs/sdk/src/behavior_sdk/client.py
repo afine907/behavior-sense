@@ -1,8 +1,6 @@
 """
 BehaviorSense SDK客户端
 """
-import uuid
-from datetime import UTC, datetime
 from typing import Any
 
 import httpx

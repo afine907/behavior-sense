@@ -6,11 +6,10 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from openai import OpenAI, AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 
 from behavior_core.models.agent_event import AgentBehavior, AgentEventType, AgentType
 from behavior_core.models.token_usage import TokenUsage
-from behavior_core.models.tool_call import ToolCall, ToolType
 
 
 def _utc_now() -> datetime:
