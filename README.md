@@ -6,14 +6,19 @@
   <br>
 </h1>
 
-<h4 align="center">Real-time User Behavior Stream Analytics Engine</h4>
+<h4 align="center">🔍 Real-time AI Agent Behavior Analytics Platform</h4>
+
+<p align="center">
+  Monitor, analyze, and govern AI Agent behavior in real-time with 12 anomaly detectors.
+</p>
 
 <p align="center">
   <a href="#-why-behaviorsense">Why</a> •
   <a href="#-features">Features</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-architecture">Architecture</a> •
-  <a href="#-documentation">Documentation</a>
+  <a href="#-api">API</a> •
+  <a href="#-contributing">Contributing</a>
 </p>
 
 <p align="center">
@@ -29,6 +34,9 @@
   <a href="https://docs.astral.sh/ruff/">
     <img src="https://img.shields.io/badge/code%20style-ruff-orange.svg" alt="Code style: ruff">
   </a>
+  <a href="https://github.com/afine907/behavior-sense/stargazers">
+    <img src="https://img.shields.io/github/stars/afine907/behavior-sense.svg?style=social" alt="GitHub Stars">
+  </a>
 </p>
 
 <p align="center">
@@ -37,16 +45,23 @@
 
 ---
 
-## 🎯 What Problem Does It Solve?
+## 🎯 What is BehaviorSense?
 
-**Detect fraud, abuse, and anomalies in user behavior — in real-time, with sub-second latency.**
+**BehaviorSense** is an open-source, real-time AI Agent behavior analytics platform. It monitors, analyzes, and governs autonomous AI Agent systems with sub-second latency.
 
-BehaviorSense is a production-ready engine that processes user behavior events (clicks, purchases, logins) through a flexible rule engine, automatically tags users based on patterns, and flags high-risk events for human review.
+As teams deploy AI Agents that call tools, spend tokens, and interact with systems, visibility becomes critical. BehaviorSense provides:
+
+- **🔍 Full Execution Tracing** - Track every agent action, tool call, and decision
+- **🚨 12 Anomaly Detectors** - Catch cost spikes, prompt injection, dead loops, and more
+- **📊 Multi-dimensional Scoring** - Quantify agent behavior risk
+- **🛡️ Hot-reload Guardrails** - YAML-based rules, no restart needed
+- **👥 Human-in-the-loop** - Built-in audit workflow for high-stakes decisions
+- **🔗 Multi-Agent Graph** - Visualize agent interactions and dependencies
 
 ```
-User clicks → Stream processes → Rules match → Auto-tag / Flag for audit
+Agent Action → Stream Processing → Detection → Auto-tag / Flag for Audit
      ↓              < 1 second           ↓
-  [Pulsar] ──────→ [Faust] ──────→ [Decision] ──────→ [Action]
+  [Pulsar] ──────→ [Stream] ──────→ [Decision] ──────→ [Action]
 ```
 
 ---
@@ -55,66 +70,90 @@ User clicks → Stream processes → Rules match → Auto-tag / Flag for audit
 
 | Pain Point | BehaviorSense Solution |
 |------------|------------------------|
-| **Rule changes require code deploy** | Hot-reload rules via YAML/DB — no restart needed |
-| **SQL-based fraud detection is slow** | AST-based rule engine evaluates in milliseconds |
-| **False positives need manual review** | Built-in human-in-the-loop audit workflow |
-| **Can't see what's happening now** | Real-time dashboard + Prometheus metrics |
-| **Monolith is hard to scale** | Microservices with independent deployment |
+| **No visibility into agent tool calls** | Full execution tracing with latency and cost breakdowns |
+| **Token costs spiral out of control** | Real-time cost anomaly detection with per-agent budgets |
+| **Prompt injection goes undetected** | AST-based prompt analysis catches injection patterns instantly |
+| **Multi-agent systems are opaque** | Correlation engine links actions across agent workflows |
+| **Guardrails require code changes** | Hot-reload safety rules via YAML — no redeploy needed |
+| **Hard to audit autonomous decisions** | Built-in human-in-the-loop review workflow |
 
-### 🚀 Innovations
+### 🏆 Why Not Langfuse / Phoenix / LangSmith?
 
-- **⚡ Sub-second Latency** — From event to decision in < 1 second
-- **🔥 Hot-reload Rules** — Add/modify rules without service restart
-- **🛡️ Safe Rule Parsing** — AST-based evaluation prevents code injection
-- **👥 Human-in the-loop** — Built-in audit workflow for high-stakes decisions
-- **📊 Multi-layer Detection** — Pre-built detectors for login failures, rapid clicks, unusual purchases
+| Feature | BehaviorSense | Langfuse | Phoenix | LangSmith |
+|---------|---------------|----------|---------|-----------|
+| **Real-time Anomaly Detection** | ✅ 12 detectors | ❌ | 🔶 Basic | ❌ |
+| **Rule Engine** | ✅ AST-safe, hot-reload | ❌ | ❌ | ❌ |
+| **Cost Optimization** | ✅ Built-in suggestions | 🔶 Basic | 🔶 Basic | ✅ |
+| **Multi-Agent Graph** | ✅ Dependency analysis | ❌ | ❌ | ❌ |
+| **Behavior Replay** | ✅ Step-through | ❌ | ❌ | ❌ |
+| **Compliance Checking** | ✅ 8 rules | ❌ | ❌ | ❌ |
+| **Prompt Management** | ✅ Version control | ✅ | ❌ | ✅ |
+| **OTel Integration** | ✅ Native | ✅ | ✅ | ❌ |
+| **Framework Integrations** | ✅ LangChain, LlamaIndex, OpenAI | ✅ | ✅ | ✅ LangChain |
+| **Self-hosted** | ✅ MIT License | ✅ MIT | 🔶 Elastic 2.0 | ❌ SaaS only |
+| **License** | MIT | MIT | Elastic 2.0 | Proprietary |
 
 ---
 
 ## ✨ Features
 
-<table>
-<tr>
-<td width="50%">
+### 🚨 12 Anomaly Detectors
 
-### 🎯 Rule Engine
+| Detector | Detection Target | Threshold |
+|----------|------------------|-----------|
+| **AgentLoopDetector** | Dead loops | 5+ same actions in 60s |
+| **CostSpikeDetector** | Cost spikes | >$10/min per agent |
+| **TokenExplosionDetector** | Token explosion | >10K tokens in 10s |
+| **ToolAbuseDetector** | Tool abuse | >50 calls/min |
+| **TimeoutCascadeDetector** | Timeout cascades | 3+ timeouts in 5min |
+| **CapabilityDriftDetector** | Capability drift | New tool usage patterns |
+| **MultiAgentContentionDetector** | Resource contention | Coordinated resource access |
+| **PromptInjectionDetector** | Prompt injection | Multiple injection indicators |
+| **DataExfiltrationDetector** | Data leaks | Sensitive data in outputs |
+| **HallucinationDetector** | Hallucinations | Low confidence + hedging |
+| **CostExplosionDetector** | Fleet cost explosion | >$100/min fleet-wide |
+| **AgentCollusionDetector** | Agent collusion | Excessive bilateral communication |
+
+### 🛡️ Rule Engine
 
 ```yaml
-# rules/fraud_detection.yaml
-- name: "High Value Purchase Alert"
-  condition: "amount > 10000 and user_age_days < 7"
+# rules/agent_guardrails.yaml
+- name: "High Token Cost Alert"
+  condition: "token_cost > 5.00 and agent_role != 'planner'"
   priority: 10
   actions:
-    - type: TAG_USER
-      params: { tags: ["high_risk"] }
+    - type: TAG_AGENT
+      params: { tags: ["cost_anomaly"] }
     - type: TRIGGER_AUDIT
       params: { level: "high" }
+
+- name: "Prompt Injection Detected"
+  condition: "injection_score > 0.85"
+  priority: 1
+  actions:
+    - type: BLOCK_EXECUTION
+      params: { reason: "injection_detected" }
+    - type: TRIGGER_AUDIT
+      params: { level: "critical" }
 ```
 
-**Hot-reload enabled** — modify rules without restart
+**Hot-reload enabled** — modify guardrails without restart
 
-</td>
-<td width="50%">
+### 📊 Agent Analytics
 
-### 🔍 Built-in Detectors
+- **Agent Profiling** - Capabilities, history, risk assessment
+- **Cost Tracking** - Per-agent and fleet-wide cost monitoring
+- **Performance Metrics** - Latency, success rate, error rate
+- **Behavior Patterns** - Loop detection, escalation, alternation
+- **Optimization Suggestions** - Cost, performance, tool usage
+- **Compliance Checking** - Safety, cost, tool, privacy policies
 
-| Detector | Threshold | Use Case |
-|----------|-----------|----------|
-| Login Failure | >5 fails/10min | Brute force attack |
-| High Frequency | >100 events/min | Bot activity |
-| Rapid Click | >20 clicks/10s | Click farming |
-| Unusual Purchase | >5 same-item/hour | Reselling/fraud |
+### 🔗 Multi-Agent Graph
 
-</td>
-</tr>
-</table>
-
-### 🏗️ Full-Stack Solution
-
-- **Frontend**: Next.js dashboard for monitoring & management
-- **Backend**: 5 FastAPI microservices + Faust stream processor
-- **Infrastructure**: Pulsar, PostgreSQL, Redis, ClickHouse
-- **Observability**: Prometheus + Grafana dashboards
+- **Interaction Visualization** - See how agents communicate
+- **Bottleneck Detection** - Find performance bottlenecks
+- **Community Detection** - Identify agent clusters
+- **Critical Path Analysis** - Find the longest dependency chain
 
 ---
 
@@ -140,10 +179,10 @@ uv sync
 docker compose -f infrastructure/docker/compose/base.yml up -d
 
 # 4. Start services (in separate terminals)
-uv run uvicorn behavior_mock.main:app --port 8001      # Event generator
+uv run uvicorn behavior_mock.main:app --port 8001      # Agent event simulator
 uv run python -m behavior_stream                        # Stream processor
 uv run uvicorn behavior_rules.main:app --port 8002     # Rule engine
-uv run uvicorn behavior_insight.main:app --port 8003   # User insights
+uv run uvicorn behavior_insight.main:app --port 8003   # Agent insights
 uv run uvicorn behavior_audit.main:app --port 8004     # Audit workflow
 
 # 5. Open dashboard
@@ -151,193 +190,234 @@ cd apps/web && pnpm install && pnpm dev
 # → http://localhost:5143
 ```
 
-### Generate Test Events
+### Simulate Agent Activity
 
 ```bash
-# Start a normal traffic scenario
+# Start a normal multi-agent scenario
 curl -X POST http://localhost:8001/api/mock/scenario/start \
   -H "Content-Type: application/json" \
   -d '{"scenario_type": "normal", "rate_per_second": 100}'
+
+# Start an anomaly scenario (cost spike, injection attempts)
+curl -X POST http://localhost:8001/api/mock/scenario/start \
+  -H "Content-Type: application/json" \
+  -d '{"scenario_type": "abnormal", "rate_per_second": 50}'
+```
+
+### Query Agent Insights
+
+```bash
+# Get an agent's behavior profile
+curl http://localhost:8003/api/agents/agent-001
+
+# List all agents flagged with cost anomalies
+curl http://localhost:8003/api/agents/tags?tag=cost_anomaly
+
+# Get agent statistics
+curl http://localhost:8003/api/agents/agent-001/stats
 ```
 
 ---
 
 ## 📐 Architecture
 
-```mermaid
-flowchart TB
-    subgraph DataIngestion["📡 Data Ingestion Layer"]
-        direction LR
-        subgraph MockService["Mock Service :8001"]
-            Generator["🎲 Event Generator\nBehaviorGenerator"]
-            Scenarios["🎬 Scenario Simulation\nNormal/FlashSale/Abnormal/Gradual"]
-            Producer["📤 Pulsar Producer"]
-        end
-        ExternalData["🌐 External Data Sources"]
-    end
-
-    subgraph StreamProcessing["⚡ Stream Processing Layer"]
-        subgraph Pulsar["Apache Pulsar :6650"]
-            TopicEvents["📥 events Topic"]
-            TopicAlerts["📤 alerts Topic"]
-            TopicAgg["📊 aggregation Topic"]
-        end
-        subgraph StreamService["Stream Processor"]
-            Consumer["📥 Event Consumer"]
-            subgraph Aggregator["📐 Aggregator"]
-                WindowAgg["Minute Window Aggregation"]
-                UserStats["User Statistics"]
-            end
-            subgraph Detector["🔍 Detectors"]
-                LoginFail["Login Failure Detection\n>5 fails/10min"]
-                HighFreq["High Frequency Detection\n>100 events/min"]
-                RapidClick["Rapid Click Detection\n>20 clicks/10s"]
-                UnusualPurchase["Unusual Purchase Detection\n>5 purchases/hour"]
-            end
-            AlertSender["🚨 Alert Sender"]
-        end
-    end
-
-    subgraph RuleEngine["🎯 Rule Engine Layer :8002"]
-        subgraph RulesService["Rules Service"]
-            RuleCRUD["📋 Rule Management\nCRUD API"]
-            RuleLoader["📂 Rule Loader\nYAML/DB"]
-            subgraph Engine["⚙️ Rule Engine"]
-                ASTParser["AST Parser"]
-                ConditionMatch["Condition Matching"]
-                PrioritySort["Priority Sorting"]
-            end
-            subgraph Actions["🎬 Action Handlers"]
-                TagAction["TAG_USER\nTag User"]
-                AuditAction["TRIGGER_AUDIT\nTrigger Audit"]
-            end
-        end
-    end
-
-    subgraph InsightLayer["📊 Insight Analytics Layer :8003"]
-        subgraph InsightService["Insight Service"]
-            TagService["🏷️ Tag Service"]
-            UserProfile["👤 User Profile"]
-            TagStats["📈 Tag Statistics"]
-        end
-        Redis[("Redis\n:6379")]
-        ClickHouse[("ClickHouse\n:8123")]
-    end
-
-    subgraph AuditLayer["✅ Manual Audit Layer :8004"]
-        subgraph AuditService["Audit Service"]
-            OrderMgmt["📋 Order Management\nCreate/Query/Assign"]
-            ReviewWorkflow["📝 Review Workflow\npending→in_review→approved/rejected"]
-            AuditStats["📊 Audit Statistics"]
-        end
-        PostgreSQL[("PostgreSQL\n:5432")]
-    end
-
-    subgraph Frontend["🖥️ Frontend Layer :5143"]
-        NextJS["Next.js Web App"]
-        subgraph Pages["Pages"]
-            Dashboard["Dashboard\nMonitoring"]
-            RulesPage["Rules\nManagement"]
-            InsightPage["Insight\nUser Analytics"]
-            AuditPage["Audit\nReview Center"]
-            MockPage["Mock\nEvent Simulation"]
-        end
-    end
-
-    %% Data Flow Connections
-    Generator --> Producer
-    Scenarios --> Producer
-    Producer --> TopicEvents
-    ExternalData --> TopicEvents
-
-    TopicEvents --> Consumer
-    Consumer --> Aggregator
-    Consumer --> Detector
-
-    Aggregator --> WindowAgg
-    WindowAgg --> UserStats
-    UserStats --> TopicAgg
-
-    Detector --> LoginFail
-    Detector --> HighFreq
-    Detector --> RapidClick
-    Detector --> UnusualPurchase
-    LoginFail --> AlertSender
-    HighFreq --> AlertSender
-    RapidClick --> AlertSender
-    UnusualPurchase --> AlertSender
-    AlertSender --> TopicAlerts
-
-    TopicAlerts --> RuleCRUD
-    TopicAgg --> RuleCRUD
-    RuleLoader --> Engine
-    RuleCRUD --> Engine
-    Engine --> ASTParser
-    ASTParser --> ConditionMatch
-    ConditionMatch --> PrioritySort
-    PrioritySort --> Actions
-    Actions --> TagAction
-    Actions --> AuditAction
-
-    TagAction --> TagService
-    TagService --> Redis
-    TagService --> ClickHouse
-    TagService --> UserProfile
-    UserProfile --> TagStats
-
-    AuditAction --> OrderMgmt
-    OrderMgmt --> ReviewWorkflow
-    ReviewWorkflow --> AuditStats
-    OrderMgmt --> PostgreSQL
-
-    NextJS --> Pages
-    Dashboard --> |"Real-time Monitor"| StreamService
-    RulesPage --> |"Rule Management"| RuleCRUD
-    InsightPage --> |"User Query"| UserProfile
-    AuditPage --> |"Audit Operations"| OrderMgmt
-    MockPage --> |"Event Generation"| Generator
-
-    %% Styles
-    classDef service fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef storage fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef detector fill:#fce4ec,stroke:#880e4f,stroke-width:1px
-    classDef action fill:#e8f5e9,stroke:#1b5e20,stroke-width:1px
-
-    class MockService,StreamService,RulesService,InsightService,AuditService service
-    class Pulsar,Redis,PostgreSQL,ClickHouse storage
-    class LoginFail,HighFreq,RapidClick,UnusualPurchase detector
-    class TagAction,AuditAction action
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           BehaviorSense Architecture                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
+│  │   Mock       │    │   External   │    │   SDK        │                  │
+│  │   Service    │    │   Agents     │    │   Client     │                  │
+│  │   :8001      │    │   (LangChain │    │              │                  │
+│  │              │    │    etc.)      │    │              │                  │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘                  │
+│         │                   │                   │                           │
+│         └───────────────────┼───────────────────┘                           │
+│                             │                                               │
+│                             ▼                                               │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                      Apache Pulsar :6650                             │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │  │
+│  │  │   agent.    │  │   agent.    │  │   agent.    │                 │  │
+│  │  │   events    │  │   alerts    │  │   aggreg.   │                 │  │
+│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘                 │  │
+│  └─────────┼────────────────┼────────────────┼─────────────────────────┘  │
+│            │                │                │                              │
+│            ▼                ▼                ▼                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                    Stream Processor                                  │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │  │
+│  │  │   Event     │  │   12        │  │   Window    │                 │  │
+│  │  │   Consumer  │──▶  Detectors  │  │   Aggregator│                 │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘                 │  │
+│  │                                                                      │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │  │
+│  │  │   Anomaly   │  │   Baseline  │  │   Pattern   │                 │  │
+│  │  │   Scorer    │  │   Builder   │  │   Detector  │                 │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘                 │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                             │                                               │
+│         ┌───────────────────┼───────────────────┐                           │
+│         │                   │                   │                           │
+│         ▼                   ▼                   ▼                           │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
+│  │   Rules      │    │   Insight    │    │   Audit      │                  │
+│  │   Service    │    │   Service    │    │   Service    │                  │
+│  │   :8002      │    │   :8003      │    │   :8004      │                  │
+│  │              │    │              │    │              │                  │
+│  │  - Rule CRUD │    │  - Profiles  │    │  - Orders    │                  │
+│  │  - AST Eval  │    │  - Stats     │    │  - Workflow  │                  │
+│  │  - Hot-reload│    │  - Tags      │    │  - Review    │                  │
+│  │  - Actions   │    │  - Graph     │    │  - Stats     │                  │
+│  └──────────────┘    └──────────────┘    └──────────────┘                  │
+│         │                   │                   │                           │
+│         └───────────────────┼───────────────────┘                           │
+│                             │                                               │
+│                             ▼                                               │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                         Storage Layer                                │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────┐  │  │
+│  │  │ PostgreSQL  │  │  ClickHouse │  │    Redis    │  │  Pulsar   │  │  │
+│  │  │   :5432     │  │   :8123     │  │   :6379     │  │  :6650    │  │  │
+│  │  │             │  │             │  │             │  │           │  │  │
+│  │  │ - Profiles  │  │ - Events    │  │ - Tags      │  │ - Events  │  │  │
+│  │  │ - Rules     │  │ - Logs      │  │ - Cache     │  │ - Alerts  │  │  │
+│  │  │ - Audit     │  │ - Traces    │  │ - Rate Limit│  │ - Agg     │  │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └───────────┘  │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                             │                                               │
+│                             ▼                                               │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                       Frontend :5143                                 │  │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │  │
+│  │  │Dashboard │ │  Agents  │ │  Rules   │ │  Audit   │ │  Costs   │  │  │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Why |
-|-------|------------|-----|
+| Layer | Technology | Purpose |
+|-------|------------|---------|
 | **Runtime** | Python 3.11+ | Async support, type hints |
 | **Package Manager** | [uv](https://docs.astral.sh/uv/) | 10x faster than pip |
 | **Web Framework** | FastAPI | Async, OpenAPI, type-safe |
 | **Frontend** | Next.js 14 | React, SSR, App Router |
-| **Stream Processing** | Faust | Kafka-like streaming in Python |
+| **Stream Processing** | Pulsar Client | Real-time event processing |
 | **Message Queue** | Apache Pulsar | Multi-tenancy, geo-replication |
 | **Database** | PostgreSQL | ACID, reliable |
 | **Cache** | Redis | Fast, pub/sub support |
-| **Analytics** | ClickHouse | OLAP for behavior analysis |
+| **Analytics** | ClickHouse | OLAP for agent behavior analysis |
 | **Monitoring** | Prometheus + Grafana | Industry standard |
 
 ---
 
-## 📖 Documentation
+## 📚 API Reference
 
-| Document | Description |
-|----------|-------------|
-| [Architecture Design](wiki/architecture.md) | System architecture deep dive |
-| [Module Design](wiki/modules.md) | Service responsibilities |
-| [Technology Stack](wiki/technology.md) | Tech choices explained |
-| [API Design](wiki/api.md) | REST API specifications |
-| [Deployment Guide](wiki/deployment.md) | Production deployment |
-| [Best Practices](wiki/best-practices.md) | FastAPI, Pydantic, SQLAlchemy patterns |
+### Agent Mock Service (`:8001`)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agent-mock/generate` | POST | Generate agent events |
+| `/api/agent-mock/scenario/start` | POST | Start simulation scenario |
+| `/api/agent-mock/scenarios` | GET | List scenarios |
+| `/ws/agent-events` | WebSocket | Real-time event stream |
+| `/ws/alerts` | WebSocket | Real-time alert stream |
+
+### Rule Engine (`:8002`)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/rules` | GET/POST | List/Create rules |
+| `/api/rules/{id}` | GET/PUT/DELETE | Get/Update/Delete rule |
+| `/api/rules/evaluate` | POST | Evaluate rules |
+| `/api/rules/validate` | POST | Validate rule syntax |
+
+### Insight Service (`:8003`)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents` | GET | List agents |
+| `/api/agents/{id}` | GET | Get agent profile |
+| `/api/agents/{id}/stats` | GET | Get agent statistics |
+| `/api/agents/{id}/tags` | GET | Get agent tags |
+| `/api/agents/compare` | POST | Compare agents |
+| `/api/agents/overview` | GET | Global overview |
+
+### Audit Service (`:8004`)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/audit/order` | POST | Create audit order |
+| `/api/audit/orders` | GET | List orders |
+| `/api/audit/order/{id}/review` | PUT | Submit review |
+| `/api/audit/stats` | GET | Audit statistics |
+
+---
+
+## 📁 Project Structure
+
+```
+behavior-sense/
+├── libs/
+│   ├── core/                    # Shared library (models, config, security)
+│   │   └── src/behavior_core/
+│   │       ├── models/          # Pydantic v2 data models
+│   │       ├── config/          # Settings with pydantic-settings
+│   │       ├── security/        # JWT auth, RBAC
+│   │       ├── middleware/       # Rate limiting, tracing
+│   │       └── ...              # Metrics, health, resilience
+│   ├── sdk/                     # Python SDK client
+│   │   └── src/behavior_sdk/
+│   └── integrations/            # Framework integrations
+│       └── src/behavior_integrations/
+│           ├── langchain/       # LangChain callback
+│           ├── llamaindex/      # LlamaIndex callback
+│           └── openai/          # OpenAI wrapper
+│
+├── packages/
+│   ├── mock/                    # Agent event generator :8001
+│   │   └── src/behavior_mock/
+│   ├── stream/                  # Real-time stream processor
+│   │   └── src/behavior_stream/
+│   │       ├── agent_detectors.py  # 12 anomaly detectors
+│   │       ├── agent_processor.py  # Event processor
+│   │       └── operators/          # Window operators
+│   ├── rules/                   # Rule engine :8002
+│   │   └── src/behavior_rules/
+│   ├── insight/                 # Agent analytics :8003
+│   │   └── src/behavior_insight/
+│   ├── audit/                   # Audit workflow :8004
+│   │   └── src/behavior_audit/
+│   └── logs/                    # Event logs :8005
+│       └── src/behavior_logs/
+│
+├── apps/
+│   └── web/                     # Next.js frontend :5143
+│       └── src/
+│           ├── app/             # App Router pages
+│           └── components/      # React components
+│
+├── tests/                       # Test suite
+│   ├── test_core/               # Core library tests
+│   ├── test_stream/             # Stream processor tests
+│   ├── test_api/                # API endpoint tests
+│   └── test_integration/        # Integration tests
+│
+├── infrastructure/
+│   └── docker/                  # Docker configuration
+│       ├── compose/             # Docker Compose files
+│       └── *.sql                # Database schemas
+│
+├── docs/                        # Documentation
+├── rules/                       # Sample YAML rules
+├── examples/                    # SDK usage examples
+└── wiki/                        # Architecture docs
+```
 
 ---
 
@@ -345,9 +425,12 @@ flowchart TB
 
 ```bash
 # Fast tests (no external dependencies)
-uv run pytest tests/test_api/test_mock_api.py tests/test_api/test_rules_api.py -v
+uv run pytest tests/test_core/ tests/test_stream/ -v
 
-# Full integration tests (requires Docker)
+# API tests
+uv run pytest tests/test_api/ -v
+
+# Integration tests (requires Docker)
 docker compose -f infrastructure/docker/compose/test.yml up -d
 TEST_REAL_DEPS=1 uv run pytest tests/ -v
 
@@ -360,6 +443,26 @@ uv run pytest tests/ --cov=libs --cov=packages --cov-report=html
 ## 🤝 Contributing
 
 We welcome contributions! See [Contributing Guidelines](CONTRIBUTING.md).
+
+### Quick Start for Contributors
+
+```bash
+# 1. Fork and clone
+git clone https://github.com/YOUR_USERNAME/behavior-sense.git
+cd behavior-sense
+
+# 2. Install dependencies
+uv sync
+
+# 3. Create feature branch
+git checkout -b feat/your-feature
+
+# 4. Make changes and test
+uv run pytest tests/ -v
+
+# 5. Submit PR
+git push origin feat/your-feature
+```
 
 ### Commit Convention
 
@@ -376,6 +479,16 @@ docs(api): update endpoint documentation
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [Apache Pulsar](https://pulsar.apache.org/) - Multi-tenant messaging
+- [ClickHouse](https://clickhouse.com/) - OLAP analytics
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [Next.js](https://nextjs.org/) - React framework
+- [Pydantic](https://docs.pydantic.dev/) - Data validation
 
 ---
 

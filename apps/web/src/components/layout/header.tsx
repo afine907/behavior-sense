@@ -19,12 +19,13 @@ import { cn } from '@/lib/utils/cn';
 
 // Breadcrumb mapping
 const breadcrumbMap: Record<string, string> = {
-  '/': 'Dashboard',
-  '/mock': 'Event Simulation',
-  '/rules': 'Rules Management',
-  '/insight': 'User Insight',
-  '/audit': 'Audit Workbench',
-  '/monitor': 'System Monitor',
+  '/': 'Overview',
+  '/agents': 'Agents',
+  '/traces': 'Traces',
+  '/alerts': 'Alerts',
+  '/rules': 'Rules',
+  '/audit': 'Audit',
+  '/costs': 'Costs',
 };
 
 export function Header() {
