@@ -6,14 +6,14 @@ import { NavItem } from './nav-item';
 import { cn } from '@/lib/utils/cn';
 import {
   LayoutDashboard,
-  Sparkles,
   ScrollText,
-  Users,
   ClipboardCheck,
-  Activity,
   ChevronLeft,
   ChevronRight,
-  FileText,
+  Bot,
+  Link2,
+  Bell,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -29,38 +29,37 @@ const navItems: NavItemConfig[] = [
   {
     href: '/',
     icon: LayoutDashboard,
-    label: 'Dashboard',
+    label: 'Overview',
   },
   {
-    href: '/mock',
-    icon: Sparkles,
-    label: 'Event Simulation',
+    href: '/agents',
+    icon: Bot,
+    label: 'Agents',
   },
   {
-    href: '/logs',
-    icon: FileText,
-    label: 'Event Logs',
+    href: '/traces',
+    icon: Link2,
+    label: 'Traces',
+  },
+  {
+    href: '/alerts',
+    icon: Bell,
+    label: 'Alerts',
   },
   {
     href: '/rules',
     icon: ScrollText,
-    label: 'Rules Management',
-  },
-  {
-    href: '/insight',
-    icon: Users,
-    label: 'User Insight',
+    label: 'Rules',
   },
   {
     href: '/audit',
     icon: ClipboardCheck,
-    label: 'Audit Workbench',
+    label: 'Audit',
   },
   {
-    href: '/monitor',
-    icon: Activity,
-    label: 'System Monitor',
-    roles: ['admin', 'analyst'],
+    href: '/costs',
+    icon: DollarSign,
+    label: 'Costs',
   },
 ];
 
@@ -94,7 +93,12 @@ export function Sidebar() {
         {sidebarCollapsed ? (
           <span className="text-xl font-bold text-primary">BS</span>
         ) : (
-          <span className="text-xl font-bold text-primary">BehaviorSense</span>
+          <div>
+            <span className="text-xl font-bold text-primary">
+              {'\u{1F9E0}'} BehaviorSense
+            </span>
+            <p className="text-xs text-muted-foreground mt-0.5">AI Agent Analytics</p>
+          </div>
         )}
       </div>
 
@@ -111,8 +115,14 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Collapse Toggle */}
+      {/* Collapse Toggle & Version */}
       <div className="border-t p-2">
+        {!sidebarCollapsed && (
+          <div className="mb-2 px-3 py-1 text-xs text-muted-foreground/60">
+            <div>BehaviorSense v2.0</div>
+            <div>AI Agent Analytics</div>
+          </div>
+        )}
         <Separator className="mb-2" />
         <Button
           variant="ghost"

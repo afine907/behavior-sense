@@ -6,7 +6,11 @@
   <br>
 </h1>
 
-<h4 align="center">Real-time User Behavior Stream Analytics Engine</h4>
+<h4 align="center">Real-time AI Agent Behavior Analytics Engine</h4>
+
+<p align="center">
+  Monitor, analyze, and govern AI Agent behavior in real-time.
+</p>
 
 <p align="center">
   <a href="#-why-behaviorsense">Why</a> •
@@ -39,12 +43,12 @@
 
 ## 🎯 What Problem Does It Solve?
 
-**Detect fraud, abuse, and anomalies in user behavior — in real-time, with sub-second latency.**
+**See everything your AI Agents do — trace every action, catch anomalies, and enforce guardrails in real-time.**
 
-BehaviorSense is a production-ready engine that processes user behavior events (clicks, purchases, logins) through a flexible rule engine, automatically tags users based on patterns, and flags high-risk events for human review.
+As teams deploy autonomous AI Agents that call tools, spend tokens, and interact with systems, visibility becomes critical. BehaviorSense is a production-ready engine that captures agent execution traces, detects cost anomalies and prompt injection attempts, maps capability usage, and flags risky behaviors for human review — all with sub-second latency.
 
 ```
-User clicks → Stream processes → Rules match → Auto-tag / Flag for audit
+Agent action → Stream processes → Rules match → Auto-tag / Flag for audit
      ↓              < 1 second           ↓
   [Pulsar] ──────→ [Faust] ──────→ [Decision] ──────→ [Action]
 ```
@@ -55,19 +59,37 @@ User clicks → Stream processes → Rules match → Auto-tag / Flag for audit
 
 | Pain Point | BehaviorSense Solution |
 |------------|------------------------|
-| **Rule changes require code deploy** | Hot-reload rules via YAML/DB — no restart needed |
-| **SQL-based fraud detection is slow** | AST-based rule engine evaluates in milliseconds |
-| **False positives need manual review** | Built-in human-in-the-loop audit workflow |
-| **Can't see what's happening now** | Real-time dashboard + Prometheus metrics |
-| **Monolith is hard to scale** | Microservices with independent deployment |
+| **No visibility into agent tool calls** | Full execution tracing with latency and cost breakdowns |
+| **Token costs spiral out of control** | Real-time cost anomaly detection with per-agent budgets |
+| **Prompt injection goes undetected** | AST-based prompt analysis catches injection patterns instantly |
+| **Multi-agent systems are opaque** | Correlation engine links actions across agent workflows |
+| **Guardrails require code changes** | Hot-reload safety rules via YAML — no redeploy needed |
+| **Hard to audit autonomous decisions** | Built-in human-in-the-loop review workflow |
 
 ### 🚀 Innovations
 
-- **⚡ Sub-second Latency** — From event to decision in < 1 second
-- **🔥 Hot-reload Rules** — Add/modify rules without service restart
-- **🛡️ Safe Rule Parsing** — AST-based evaluation prevents code injection
-- **👥 Human-in the-loop** — Built-in audit workflow for high-stakes decisions
-- **📊 Multi-layer Detection** — Pre-built detectors for login failures, rapid clicks, unusual purchases
+- **⚡ Sub-second Latency** — From agent action to governance decision in < 1 second
+- **🔥 Hot-reload Rules** — Add or modify guardrails without service restart
+- **🛡️ Safe Rule Parsing** — AST-based evaluation prevents eval injection
+- **🤖 Agent-native Tracing** — Purpose-built for LLM tool calls, token usage, and multi-step reasoning
+- **🔗 Multi-Agent Correlation** — Track causality chains across agent handoffs
+- **👥 Human-in-the-loop** — Built-in audit workflow for high-stakes agent decisions
+
+### 🏆 Why Not Langfuse / Phoenix / LangSmith?
+
+| Feature | BehaviorSense | Langfuse | Phoenix | LangSmith |
+|---------|---------------|----------|---------|-----------|
+| **Real-time Anomaly Detection** | ✅ 12 detectors | ❌ | 🔶 Basic | ❌ |
+| **Rule Engine** | ✅ AST-safe, hot-reload | ❌ | ❌ | ❌ |
+| **Cost Optimization** | ✅ Built-in suggestions | 🔶 Basic | 🔶 Basic | ✅ |
+| **Multi-Agent Graph** | ✅ Dependency analysis | ❌ | ❌ | ❌ |
+| **Behavior Replay** | ✅ Step-through | ❌ | ❌ | ❌ |
+| **Compliance Checking** | ✅ 8 rules | ❌ | ❌ | ❌ |
+| **Prompt Management** | ✅ Version control | ✅ | ❌ | ✅ |
+| **OTel Integration** | ✅ Native | ✅ | ✅ | ❌ |
+| **Framework Integrations** | ✅ LangChain, LlamaIndex, OpenAI | ✅ | ✅ | ✅ LangChain |
+| **Self-hosted** | ✅ MIT License | ✅ MIT | 🔶 Elastic 2.0 | ❌ SaaS only |
+| **License** | MIT | MIT | Elastic 2.0 | Proprietary |
 
 ---
 
@@ -77,33 +99,43 @@ User clicks → Stream processes → Rules match → Auto-tag / Flag for audit
 <tr>
 <td width="50%">
 
-### 🎯 Rule Engine
+### 🎯 Agent Guardrail Engine
 
 ```yaml
-# rules/fraud_detection.yaml
-- name: "High Value Purchase Alert"
-  condition: "amount > 10000 and user_age_days < 7"
+# rules/agent_guardrails.yaml
+- name: "High Token Cost Alert"
+  condition: "token_cost > 5.00 and agent_role != 'planner'"
   priority: 10
   actions:
-    - type: TAG_USER
-      params: { tags: ["high_risk"] }
+    - type: TAG_AGENT
+      params: { tags: ["cost_anomaly"] }
     - type: TRIGGER_AUDIT
       params: { level: "high" }
+
+- name: "Prompt Injection Detected"
+  condition: "injection_score > 0.85"
+  priority: 1
+  actions:
+    - type: BLOCK_EXECUTION
+      params: { reason: "injection_detected" }
+    - type: TRIGGER_AUDIT
+      params: { level: "critical" }
 ```
 
-**Hot-reload enabled** — modify rules without restart
+**Hot-reload enabled** — modify guardrails without restart
 
 </td>
 <td width="50%">
 
-### 🔍 Built-in Detectors
+### 🔍 Built-in Agent Detectors
 
 | Detector | Threshold | Use Case |
 |----------|-----------|----------|
-| Login Failure | >5 fails/10min | Brute force attack |
-| High Frequency | >100 events/min | Bot activity |
-| Rapid Click | >20 clicks/10s | Click farming |
-| Unusual Purchase | >5 same-item/hour | Reselling/fraud |
+| Cost Anomaly | >$10/minute per agent | Runaway token usage |
+| Tool Call Burst | >50 calls/min | Agent stuck in a loop |
+| Prompt Injection | Score > 0.85 | Malicious input hijacking |
+| Unauthorized Tool | Blocked tool access | Capability boundary violation |
+| Latency Spike | >5s p99 response | Degraded agent performance |
 
 </td>
 </tr>
@@ -111,10 +143,10 @@ User clicks → Stream processes → Rules match → Auto-tag / Flag for audit
 
 ### 🏗️ Full-Stack Solution
 
-- **Frontend**: Next.js dashboard for monitoring & management
+- **Frontend**: Next.js dashboard for agent monitoring and governance
 - **Backend**: 5 FastAPI microservices + Faust stream processor
 - **Infrastructure**: Pulsar, PostgreSQL, Redis, ClickHouse
-- **Observability**: Prometheus + Grafana dashboards
+- **Observability**: Prometheus + Grafana dashboards with agent-specific panels
 
 ---
 
@@ -140,10 +172,10 @@ uv sync
 docker compose -f infrastructure/docker/compose/base.yml up -d
 
 # 4. Start services (in separate terminals)
-uv run uvicorn behavior_mock.main:app --port 8001      # Event generator
+uv run uvicorn behavior_mock.main:app --port 8001      # Agent event simulator
 uv run python -m behavior_stream                        # Stream processor
 uv run uvicorn behavior_rules.main:app --port 8002     # Rule engine
-uv run uvicorn behavior_insight.main:app --port 8003   # User insights
+uv run uvicorn behavior_insight.main:app --port 8003   # Agent insights
 uv run uvicorn behavior_audit.main:app --port 8004     # Audit workflow
 
 # 5. Open dashboard
@@ -151,13 +183,28 @@ cd apps/web && pnpm install && pnpm dev
 # → http://localhost:5143
 ```
 
-### Generate Test Events
+### Simulate Agent Activity
 
 ```bash
-# Start a normal traffic scenario
+# Start a normal multi-agent scenario (coding + research agents)
 curl -X POST http://localhost:8001/api/mock/scenario/start \
   -H "Content-Type: application/json" \
   -d '{"scenario_type": "normal", "rate_per_second": 100}'
+
+# Start an anomaly scenario (cost spike, injection attempts)
+curl -X POST http://localhost:8001/api/mock/scenario/start \
+  -H "Content-Type: application/json" \
+  -d '{"scenario_type": "abnormal", "rate_per_second": 50}'
+```
+
+### Query Agent Insights
+
+```bash
+# Get an agent's behavior profile and risk tags
+curl http://localhost:8003/api/insight/agent/agent-001
+
+# List all agents flagged with cost anomalies
+curl http://localhost:8003/api/insight/tags?tag=cost_anomaly
 ```
 
 ---
@@ -166,41 +213,42 @@ curl -X POST http://localhost:8001/api/mock/scenario/start \
 
 ```mermaid
 flowchart TB
-    subgraph DataIngestion["📡 Data Ingestion Layer"]
+    subgraph DataIngestion["📡 Agent Data Ingestion Layer"]
         direction LR
         subgraph MockService["Mock Service :8001"]
-            Generator["🎲 Event Generator\nBehaviorGenerator"]
-            Scenarios["🎬 Scenario Simulation\nNormal/FlashSale/Abnormal/Gradual"]
+            Generator["🎲 Agent Event Generator\nAgentBehaviorGenerator"]
+            Scenarios["🎬 Scenario Simulation\nNormal/CostSpike/Injection/Drift"]
             Producer["📤 Pulsar Producer"]
         end
-        ExternalData["🌐 External Data Sources"]
+        ExternalData["🌐 Agent Frameworks\nLangChain · CrewAI · AutoGen · Custom"]
     end
 
     subgraph StreamProcessing["⚡ Stream Processing Layer"]
         subgraph Pulsar["Apache Pulsar :6650"]
-            TopicEvents["📥 events Topic"]
-            TopicAlerts["📤 alerts Topic"]
-            TopicAgg["📊 aggregation Topic"]
+            TopicEvents["📥 agent.events Topic"]
+            TopicAlerts["📤 agent.alerts Topic"]
+            TopicAgg["📊 agent.aggregation Topic"]
         end
         subgraph StreamService["Stream Processor"]
             Consumer["📥 Event Consumer"]
             subgraph Aggregator["📐 Aggregator"]
                 WindowAgg["Minute Window Aggregation"]
-                UserStats["User Statistics"]
+                AgentStats["Agent Statistics\nToken Usage · Latency · Cost"]
             end
-            subgraph Detector["🔍 Detectors"]
-                LoginFail["Login Failure Detection\n>5 fails/10min"]
-                HighFreq["High Frequency Detection\n>100 events/min"]
-                RapidClick["Rapid Click Detection\n>20 clicks/10s"]
-                UnusualPurchase["Unusual Purchase Detection\n>5 purchases/hour"]
+            subgraph Detector["🔍 Agent Detectors"]
+                CostAnomaly["Cost Anomaly Detection\n>$10/min per agent"]
+                ToolBurst["Tool Call Burst Detection\n>50 calls/min"]
+                InjectionDetect["Prompt Injection Detection\nScore > 0.85"]
+                UnauthorizedTool["Unauthorized Tool Detection\nCapability boundary"]
+                LatencySpike["Latency Spike Detection\n>p99 threshold"]
             end
             AlertSender["🚨 Alert Sender"]
         end
     end
 
-    subgraph RuleEngine["🎯 Rule Engine Layer :8002"]
+    subgraph RuleEngine["🎯 Guardrail Engine Layer :8002"]
         subgraph RulesService["Rules Service"]
-            RuleCRUD["📋 Rule Management\nCRUD API"]
+            RuleCRUD["📋 Guardrail Management\nCRUD API"]
             RuleLoader["📂 Rule Loader\nYAML/DB"]
             subgraph Engine["⚙️ Rule Engine"]
                 ASTParser["AST Parser"]
@@ -208,25 +256,27 @@ flowchart TB
                 PrioritySort["Priority Sorting"]
             end
             subgraph Actions["🎬 Action Handlers"]
-                TagAction["TAG_USER\nTag User"]
+                TagAction["TAG_AGENT\nTag Agent"]
+                BlockAction["BLOCK_EXECUTION\nHalt Agent"]
                 AuditAction["TRIGGER_AUDIT\nTrigger Audit"]
             end
         end
     end
 
-    subgraph InsightLayer["📊 Insight Analytics Layer :8003"]
+    subgraph InsightLayer["📊 Agent Insight Layer :8003"]
         subgraph InsightService["Insight Service"]
             TagService["🏷️ Tag Service"]
-            UserProfile["👤 User Profile"]
-            TagStats["📈 Tag Statistics"]
+            AgentProfile["🤖 Agent Profile\nCapabilities · History · Risk"]
+            CapabilityMap["🗺️ Capability Mapping\nTools Used · Success Rate"]
+            CorrelationEngine["🔗 Multi-Agent Correlation\nCausality Chains"]
         end
         Redis[("Redis\n:6379")]
         ClickHouse[("ClickHouse\n:8123")]
     end
 
-    subgraph AuditLayer["✅ Manual Audit Layer :8004"]
+    subgraph AuditLayer["✅ Audit Layer :8004"]
         subgraph AuditService["Audit Service"]
-            OrderMgmt["📋 Order Management\nCreate/Query/Assign"]
+            AuditMgmt["📋 Audit Management\nCreate/Query/Assign"]
             ReviewWorkflow["📝 Review Workflow\npending→in_review→approved/rejected"]
             AuditStats["📊 Audit Statistics"]
         end
@@ -236,11 +286,11 @@ flowchart TB
     subgraph Frontend["🖥️ Frontend Layer :5143"]
         NextJS["Next.js Web App"]
         subgraph Pages["Pages"]
-            Dashboard["Dashboard\nMonitoring"]
-            RulesPage["Rules\nManagement"]
-            InsightPage["Insight\nUser Analytics"]
+            Dashboard["Dashboard\nAgent Monitoring"]
+            RulesPage["Guardrails\nRule Management"]
+            InsightPage["Insights\nAgent Analytics"]
             AuditPage["Audit\nReview Center"]
-            MockPage["Mock\nEvent Simulation"]
+            MockPage["Simulator\nAgent Scenarios"]
         end
     end
 
@@ -255,17 +305,19 @@ flowchart TB
     Consumer --> Detector
 
     Aggregator --> WindowAgg
-    WindowAgg --> UserStats
-    UserStats --> TopicAgg
+    WindowAgg --> AgentStats
+    AgentStats --> TopicAgg
 
-    Detector --> LoginFail
-    Detector --> HighFreq
-    Detector --> RapidClick
-    Detector --> UnusualPurchase
-    LoginFail --> AlertSender
-    HighFreq --> AlertSender
-    RapidClick --> AlertSender
-    UnusualPurchase --> AlertSender
+    Detector --> CostAnomaly
+    Detector --> ToolBurst
+    Detector --> InjectionDetect
+    Detector --> UnauthorizedTool
+    Detector --> LatencySpike
+    CostAnomaly --> AlertSender
+    ToolBurst --> AlertSender
+    InjectionDetect --> AlertSender
+    UnauthorizedTool --> AlertSender
+    LatencySpike --> AlertSender
     AlertSender --> TopicAlerts
 
     TopicAlerts --> RuleCRUD
@@ -277,25 +329,27 @@ flowchart TB
     ConditionMatch --> PrioritySort
     PrioritySort --> Actions
     Actions --> TagAction
+    Actions --> BlockAction
     Actions --> AuditAction
 
     TagAction --> TagService
     TagService --> Redis
     TagService --> ClickHouse
-    TagService --> UserProfile
-    UserProfile --> TagStats
+    TagService --> AgentProfile
+    AgentProfile --> CapabilityMap
+    AgentProfile --> CorrelationEngine
 
-    AuditAction --> OrderMgmt
-    OrderMgmt --> ReviewWorkflow
+    AuditAction --> AuditMgmt
+    AuditMgmt --> ReviewWorkflow
     ReviewWorkflow --> AuditStats
-    OrderMgmt --> PostgreSQL
+    AuditMgmt --> PostgreSQL
 
     NextJS --> Pages
-    Dashboard --> |"Real-time Monitor"| StreamService
-    RulesPage --> |"Rule Management"| RuleCRUD
-    InsightPage --> |"User Query"| UserProfile
-    AuditPage --> |"Audit Operations"| OrderMgmt
-    MockPage --> |"Event Generation"| Generator
+    Dashboard --> |"Real-time Agent Monitor"| StreamService
+    RulesPage --> |"Guardrail Management"| RuleCRUD
+    InsightPage --> |"Agent Query"| AgentProfile
+    AuditPage --> |"Audit Operations"| AuditMgmt
+    MockPage --> |"Agent Simulation"| Generator
 
     %% Styles
     classDef service fill:#e1f5fe,stroke:#01579b,stroke-width:2px
@@ -305,8 +359,8 @@ flowchart TB
 
     class MockService,StreamService,RulesService,InsightService,AuditService service
     class Pulsar,Redis,PostgreSQL,ClickHouse storage
-    class LoginFail,HighFreq,RapidClick,UnusualPurchase detector
-    class TagAction,AuditAction action
+    class CostAnomaly,ToolBurst,InjectionDetect,UnauthorizedTool,LatencySpike detector
+    class TagAction,BlockAction,AuditAction action
 ```
 
 ---
@@ -323,7 +377,7 @@ flowchart TB
 | **Message Queue** | Apache Pulsar | Multi-tenancy, geo-replication |
 | **Database** | PostgreSQL | ACID, reliable |
 | **Cache** | Redis | Fast, pub/sub support |
-| **Analytics** | ClickHouse | OLAP for behavior analysis |
+| **Analytics** | ClickHouse | OLAP for agent behavior analysis |
 | **Monitoring** | Prometheus + Grafana | Industry standard |
 
 ---
