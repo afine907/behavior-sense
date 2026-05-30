@@ -2,6 +2,9 @@
   "name": "@behaviorsense/web",
   "version": "0.1.0",
   "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": ["msw", "unrs-resolver"]
+  },
   "scripts": {
     "dev": "next dev -p 5143",
     "build": "next build",

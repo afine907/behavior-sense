@@ -125,12 +125,10 @@ ignore = [
     "B008",  # FastAPI Depends uses function calls in argument defaults
     "B904",  # Exception chaining style (raise ... from)
     "B905",  # zip() strict parameter (Python 3.10+ feature)
+    "I001",  # Import block formatting (handled by formatter)
     "N818",  # Exception naming convention (Error suffix)
     "UP042",  # StrEnum inheritance (requires Python 3.11+)
 ]
-
-[tool.ruff.lint.isort]
-known-first-party = ["behavior_core", "behavior_sdk", "behavior_mock", "behavior_rules", "behavior_insight", "behavior_audit", "behavior_logs", "behavior_stream", "behavior_integrations"]
 
 [tool.mypy]
 python_version = "3.11"
