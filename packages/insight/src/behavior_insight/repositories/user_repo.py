@@ -315,14 +315,17 @@ async def init_database(database_url: str) -> async_sessionmaker[AsyncSession]:
     Returns:
         异步会话工厂
     """
+    from behavior_insight.models.agent_db import Base as AgentBase
+
     engine = create_async_engine(database_url, echo=False, pool_pre_ping=True)
     async_session = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
 
-    # 创建表
+    # 创建表（用户表和Agent表）
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(AgentBase.metadata.create_all)
 
     logger.info("Database initialized")
 
