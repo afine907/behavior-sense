@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from behavior_mock.generator import BehaviorGenerator, WeightedBehaviorGenerator
 from behavior_mock.producer import MockProducer, PulsarProducer
+from behavior_mock.agent_router import router as agent_router
+from behavior_mock.agent_websocket import router as agent_ws_router
 from behavior_mock.scenarios import (
     Scenario,
     ScenarioStatus,
@@ -133,6 +135,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# 注册 Agent 路由
+app.include_router(agent_router)
+app.include_router(agent_ws_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
