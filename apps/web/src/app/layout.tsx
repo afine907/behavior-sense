@@ -7,8 +7,8 @@ import '@/styles/globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'BehaviorSense Console',
-  description: 'User Behavior Stream Analytics Engine - Admin Console',
+  title: 'BehaviorSense - AI Agent Analytics',
+  description: 'Real-time AI Agent behavior monitoring and analytics',
   icons: {
     icon: '/favicon.svg',
   },
@@ -20,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
-      <body className={inter.className}>
+    <html lang="en" className="dark">
+      <body className={`${inter.className} bg-gray-950 text-gray-100 min-h-screen`}>
         <QueryProvider>
           <ToastContextProvider>{children}</ToastContextProvider>
         </QueryProvider>

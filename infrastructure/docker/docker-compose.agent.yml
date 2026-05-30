@@ -1,0 +1,230 @@
+# Docker Compose for AI Agent Analytics
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.agent.yml up
+
+version: '3.8'
+
+services:
+  # ============================================================
+  # Agent Analytics Services
+  # ============================================================
+
+  agent-mock:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: mock
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVICE_NAME=mock
+      - PULSAR_URL=pulsar://pulsar:6650
+      - LOG_LEVEL=INFO
+    depends_on:
+      - pulsar
+    networks:
+      - behaviorsense
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  agent-stream:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: stream
+    environment:
+      - PULSAR_URL=pulsar://pulsar:6650
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - LOG_LEVEL=INFO
+    depends_on:
+      - pulsar
+      - clickhouse
+    networks:
+      - behaviorsense
+    restart: unless-stopped
+
+  agent-rules:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: rules
+    ports:
+      - "8002:8002"
+    environment:
+      - SERVICE_NAME=rules
+      - REDIS_URL=redis://redis:6379
+      - RULES_DIR=/app/rules
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+    volumes:
+      - ../../rules:/app/rules:ro
+    networks:
+      - behaviorsense
+
+  agent-insight:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: insight
+    ports:
+      - "8003:8003"
+    environment:
+      - SERVICE_NAME=insight
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/behaviorsense
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - behaviorsense
+
+  agent-audit:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: audit
+    ports:
+      - "8004:8004"
+    environment:
+      - SERVICE_NAME=audit
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/behaviorsense
+      - LOG_LEVEL=INFO
+    depends_on:
+      - postgres
+    networks:
+      - behaviorsense
+
+  agent-logs:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: logs
+    ports:
+      - "8005:8005"
+    environment:
+      - SERVICE_NAME=logs
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - LOG_LEVEL=INFO
+    depends_on:
+      - clickhouse
+    networks:
+      - behaviorsense
+
+  # ============================================================
+  # Infrastructure
+  # ============================================================
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      - CLICKHOUSE_DB=behaviorsense
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./init_agent.sql:/docker-entrypoint-initdb.d/02-init-agent.sql
+    networks:
+      - behaviorsense
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - behaviorsense
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=behaviorsense
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - behaviorsense
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  pulsar:
+    image: apachepulsar/pulsar:3.1.1
+    command: bin/pulsar standalone
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    environment:
+      - PULSAR_MEM=-Xms256m -Xmx256m
+    volumes:
+      - pulsar_data:/pulsar/data
+    networks:
+      - behaviorsense
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ============================================================
+  # Monitoring (optional)
+  # ============================================================
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - behaviorsense
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - behaviorsense
+    profiles:
+      - monitoring
+
+volumes:
+  clickhouse_data:
+  redis_data:
+  postgres_data:
+  pulsar_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  behaviorsense:
+    driver: bridge

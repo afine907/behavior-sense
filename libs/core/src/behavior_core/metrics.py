@@ -1,245 +1,268 @@
 """
-Prometheus 指标模块
-
-提供统一的 Prometheus 指标定义和收集功能。
+指标收集系统
 """
 import time
-from collections.abc import Awaitable, Callable
-from functools import wraps
-from typing import ParamSpec, TypeVar
-
-from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
-
-P = ParamSpec("P")
-R = TypeVar("R")
-
-# 创建独立的注册表，避免全局污染
-METRICS_REGISTRY = CollectorRegistry()
-
-# ===== HTTP 指标 =====
-
-# HTTP 请求总数
-HTTP_REQUESTS_TOTAL = Counter(
-    "http_requests_total",
-    "Total number of HTTP requests",
-    ["method", "endpoint", "status_code"],
-    registry=METRICS_REGISTRY,
-)
-
-# HTTP 请求延迟
-HTTP_REQUEST_DURATION_SECONDS = Histogram(
-    "http_request_duration_seconds",
-    "HTTP request latency in seconds",
-    ["method", "endpoint"],
-    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0],
-    registry=METRICS_REGISTRY,
-)
-
-# 活跃连接数
-ACTIVE_CONNECTIONS = Gauge(
-    "active_connections",
-    "Number of active connections",
-    ["service"],
-    registry=METRICS_REGISTRY,
-)
-
-# ===== 业务指标 =====
-
-# 用户事件处理总数
-USER_EVENTS_TOTAL = Counter(
-    "user_events_total",
-    "Total number of user events processed",
-    ["event_type", "source"],
-    registry=METRICS_REGISTRY,
-)
-
-# 规则匹配总数
-RULE_MATCHES_TOTAL = Counter(
-    "rule_matches_total",
-    "Total number of rule matches",
-    ["rule_id", "rule_name"],
-    registry=METRICS_REGISTRY,
-)
-
-# 审核工单总数
-AUDIT_ORDERS_TOTAL = Counter(
-    "audit_orders_total",
-    "Total number of audit orders",
-    ["status", "level"],
-    registry=METRICS_REGISTRY,
-)
-
-# 审核工单待处理数
-AUDIT_ORDERS_PENDING = Gauge(
-    "audit_orders_pending",
-    "Number of pending audit orders",
-    ["level"],
-    registry=METRICS_REGISTRY,
-)
-
-# 标签操作总数
-TAG_OPERATIONS_TOTAL = Counter(
-    "tag_operations_total",
-    "Total number of tag operations",
-    ["operation", "source"],
-    registry=METRICS_REGISTRY,
-)
-
-# ===== 服务信息 =====
-
-SERVICE_INFO = Info(
-    "service",
-    "Service information",
-    registry=METRICS_REGISTRY,
-)
+from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 
 
-def set_service_info(service_name: str, version: str = "1.0.0") -> None:
-    """
-    设置服务信息
-
-    Args:
-        service_name: 服务名称
-        version: 服务版本
-    """
-    SERVICE_INFO.info({
-        "name": service_name,
-        "version": version,
-    })
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
-def track_request_duration(method: str, endpoint: str) -> object:
-    """
-    跟踪请求延迟的上下文管理器
+@dataclass
+class Counter:
+    """计数器"""
+    name: str
+    value: float = 0.0
+    labels: dict[str, str] = field(default_factory=dict)
 
-    Args:
-        method: HTTP 方法
-        endpoint: 端点路径
+    def inc(self, amount: float = 1.0) -> None:
+        self.value += amount
 
-    Usage:
-        with track_request_duration("GET", "/api/users"):
-            # 处理请求
-    """
-    return HTTP_REQUEST_DURATION_SECONDS.labels(method=method, endpoint=endpoint).time()
-
-
-def increment_request_counter(method: str, endpoint: str, status_code: int) -> None:
-    """
-    增加请求计数
-
-    Args:
-        method: HTTP 方法
-        endpoint: 端点路径
-        status_code: HTTP 状态码
-    """
-    HTTP_REQUESTS_TOTAL.labels(
-        method=method,
-        endpoint=endpoint,
-        status_code=str(status_code),
-    ).inc()
+    def reset(self) -> None:
+        self.value = 0.0
 
 
-def track_user_event(event_type: str, source: str = "api") -> None:
-    """
-    跟踪用户事件
+@dataclass
+class Gauge:
+    """仪表盘"""
+    name: str
+    value: float = 0.0
+    labels: dict[str, str] = field(default_factory=dict)
 
-    Args:
-        event_type: 事件类型
-        source: 事件来源
-    """
-    USER_EVENTS_TOTAL.labels(event_type=event_type, source=source).inc()
+    def set(self, value: float) -> None:
+        self.value = value
 
+    def inc(self, amount: float = 1.0) -> None:
+        self.value += amount
 
-def track_rule_match(rule_id: str, rule_name: str) -> None:
-    """
-    跟踪规则匹配
-
-    Args:
-        rule_id: 规则ID
-        rule_name: 规则名称
-    """
-    RULE_MATCHES_TOTAL.labels(rule_id=rule_id, rule_name=rule_name).inc()
+    def dec(self, amount: float = 1.0) -> None:
+        self.value -= amount
 
 
-def track_audit_order(status: str, level: str) -> None:
-    """
-    跟踪审核工单
+@dataclass
+class Histogram:
+    """直方图"""
+    name: str
+    buckets: list[float] = field(default_factory=lambda: [
+        0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0
+    ])
+    counts: dict[float, int] = field(default_factory=dict)
+    sum_value: float = 0.0
+    count: int = 0
 
-    Args:
-        status: 工单状态
-        level: 审核级别
-    """
-    AUDIT_ORDERS_TOTAL.labels(status=status, level=level).inc()
+    def __post_init__(self):
+        for bucket in self.buckets:
+            self.counts[bucket] = 0
 
+    def observe(self, value: float) -> None:
+        self.sum_value += value
+        self.count += 1
+        for bucket in self.buckets:
+            if value <= bucket:
+                self.counts[bucket] += 1
 
-def set_pending_audit_orders(level: str, count: int) -> None:
-    """
-    设置待处理审核工单数
-
-    Args:
-        level: 审核级别
-        count: 数量
-    """
-    AUDIT_ORDERS_PENDING.labels(level=level).set(count)
-
-
-def track_tag_operation(operation: str, source: str = "api") -> None:
-    """
-    跟踪标签操作
-
-    Args:
-        operation: 操作类型 (create, update, delete, get)
-        source: 操作来源
-    """
-    TAG_OPERATIONS_TOTAL.labels(operation=operation, source=source).inc()
+    @property
+    def avg(self) -> float:
+        return self.sum_value / self.count if self.count > 0 else 0.0
 
 
-def get_metrics() -> str:
-    """
-    获取 Prometheus 格式的指标数据
+class MetricsRegistry:
+    """指标注册表"""
 
-    Returns:
-        Prometheus 格式的指标字符串
-    """
-    from prometheus_client import generate_latest
-    return generate_latest(METRICS_REGISTRY).decode("utf-8")
+    def __init__(self):
+        self._counters: dict[str, Counter] = {}
+        self._gauges: dict[str, Gauge] = {}
+        self._histograms: dict[str, Histogram] = {}
+
+    def counter(self, name: str, labels: dict[str, str] | None = None) -> Counter:
+        """获取或创建计数器"""
+        key = self._make_key(name, labels)
+        if key not in self._counters:
+            self._counters[key] = Counter(name=name, labels=labels or {})
+        return self._counters[key]
+
+    def gauge(self, name: str, labels: dict[str, str] | None = None) -> Gauge:
+        """获取或创建仪表盘"""
+        key = self._make_key(name, labels)
+        if key not in self._gauges:
+            self._gauges[key] = Gauge(name=name, labels=labels or {})
+        return self._gauges[key]
+
+    def histogram(self, name: str, labels: dict[str, str] | None = None) -> Histogram:
+        """获取或创建直方图"""
+        key = self._make_key(name, labels)
+        if key not in self._histograms:
+            self._histograms[key] = Histogram(name=name, labels=labels or {})
+        return self._histograms[key]
+
+    def _make_key(self, name: str, labels: dict[str, str] | None) -> str:
+        if not labels:
+            return name
+        label_str = ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
+        return f"{name}{{{label_str}}}"
+
+    def get_all_metrics(self) -> dict[str, Any]:
+        """获取所有指标"""
+        return {
+            "counters": {
+                k: {"name": v.name, "value": v.value, "labels": v.labels}
+                for k, v in self._counters.items()
+            },
+            "gauges": {
+                k: {"name": v.name, "value": v.value, "labels": v.labels}
+                for k, v in self._gauges.items()
+            },
+            "histograms": {
+                k: {
+                    "name": v.name,
+                    "count": v.count,
+                    "sum": v.sum_value,
+                    "avg": v.avg,
+                    "labels": v.labels,
+                }
+                for k, v in self._histograms.items()
+            },
+        }
+
+    def reset(self) -> None:
+        """重置所有指标"""
+        for c in self._counters.values():
+            c.reset()
+        for g in self._gauges.values():
+            g.set(0)
+        self._histograms.clear()
 
 
-def metrics_middleware(
-    request_path: str,
-) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
-    """
-    创建指标中间件装饰器
+# Global metrics registry
+_metrics = MetricsRegistry()
 
-    Args:
-        request_path: 请求路径
 
-    Returns:
-        装饰器函数
-    """
-    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-        @wraps(func)
-        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            start_time = time.time()
-            status_code = 200
+def get_metrics() -> MetricsRegistry:
+    """获取全局指标注册表"""
+    return _metrics
 
-            try:
-                result = await func(*args, **kwargs)
-                return result
-            except Exception:
-                status_code = 500
-                raise
-            finally:
-                duration = time.time() - start_time
-                HTTP_REQUEST_DURATION_SECONDS.labels(
-                    method="UNKNOWN",
-                    endpoint=request_path,
-                ).observe(duration)
-                HTTP_REQUESTS_TOTAL.labels(
-                    method="UNKNOWN",
-                    endpoint=request_path,
-                    status_code=str(status_code),
-                ).inc()
 
-        return wrapper
-    return decorator
+# Pre-defined metrics
+class AgentMetrics:
+    """Agent相关指标"""
+
+    def __init__(self, registry: MetricsRegistry | None = None):
+        self._registry = registry or get_metrics()
+
+    @property
+    def events_processed(self) -> Counter:
+        return self._registry.counter("agent_events_processed_total")
+
+    @property
+    def events_failed(self) -> Counter:
+        return self._registry.counter("agent_events_failed_total")
+
+    @property
+    def alerts_generated(self) -> Counter:
+        return self._registry.counter("agent_alerts_generated_total")
+
+    @property
+    def cost_tracked(self) -> Counter:
+        return self._registry.counter("agent_cost_tracked_usd")
+
+    @property
+    def tokens_processed(self) -> Counter:
+        return self._registry.counter("agent_tokens_processed_total")
+
+    @property
+    def active_agents(self) -> Gauge:
+        return self._registry.gauge("agent_active_count")
+
+    @property
+    def processing_latency(self) -> Histogram:
+        return self._registry.histogram("agent_processing_latency_seconds")
+
+    @property
+    def detection_latency(self) -> Histogram:
+        return self._registry.histogram("agent_detection_latency_seconds")
+
+    def record_event(self, agent_id: str, event_type: str, latency_ms: float) -> None:
+        """记录事件处理"""
+        self.events_processed.inc()
+        self.processing_latency.observe(latency_ms / 1000)
+
+    def record_alert(self, alert_type: str, severity: str) -> None:
+        """记录告警"""
+        self.alerts_generated.inc()
+
+    def record_cost(self, agent_id: str, cost_usd: float) -> None:
+        """记录成本"""
+        self.cost_tracked.inc(cost_usd)
+
+    def record_tokens(self, agent_id: str, tokens: int) -> None:
+        """记录Token使用"""
+        self.tokens_processed.inc(tokens)
+
+
+# Service info tracking
+_service_info: dict[str, str] = {}
+
+
+def set_service_info(name: str, version: str) -> None:
+    """设置服务信息（用于指标导出）"""
+    global _service_info
+    _service_info = {"name": name, "version": version}
+
+
+def get_service_info() -> dict[str, str]:
+    """获取服务信息"""
+    return dict(_service_info)
+
+
+def metrics_to_prometheus_string() -> str:
+    """将指标导出为Prometheus格式字符串"""
+    lines = []
+
+    # Service info
+    if _service_info:
+        lines.append(f'# HELP service_info Service information')
+        lines.append(f'# TYPE service_info gauge')
+        labels = ",".join(f'{k}="{v}"' for k, v in _service_info.items())
+        lines.append(f'service_info{{{labels}}} 1')
+        lines.append("")
+
+    # Counters
+    for key, counter in _metrics._counters.items():
+        labels = ""
+        if counter.labels:
+            label_str = ",".join(f'{k}="{v}"' for k, v in sorted(counter.labels.items()))
+            labels = f"{{{label_str}}}"
+        lines.append(f'# TYPE {counter.name} counter')
+        lines.append(f'{counter.name}{labels} {counter.value}')
+
+    # Gauges
+    for key, gauge in _metrics._gauges.items():
+        labels = ""
+        if gauge.labels:
+            label_str = ",".join(f'{k}="{v}"' for k, v in sorted(gauge.labels.items()))
+            labels = f"{{{label_str}}}"
+        lines.append(f'# TYPE {gauge.name} gauge')
+        lines.append(f'{gauge.name}{labels} {gauge.value}')
+
+    # Histograms
+    for key, histogram in _metrics._histograms.items():
+        labels = ""
+        if histogram.labels:
+            label_str = ",".join(f'{k}="{v}"' for k, v in sorted(histogram.labels.items()))
+            labels = f"{{{label_str}}}"
+        lines.append(f'# TYPE {histogram.name} histogram')
+        for bucket, count in sorted(histogram.counts.items()):
+            bucket_labels = f'le="{bucket}"'
+            if labels:
+                bucket_labels = f"{labels[:-1]},{bucket_labels}}}"
+            else:
+                bucket_labels = f"{{{bucket_labels}}}"
+            lines.append(f'{histogram.name}_bucket{bucket_labels} {count}')
+        lines.append(f'{histogram.name}_sum{labels} {histogram.sum_value}')
+        lines.append(f'{histogram.name}_count{labels} {histogram.count}')
+
+    return "\n".join(lines)

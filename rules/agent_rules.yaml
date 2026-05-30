@@ -1,0 +1,270 @@
+# AI Agent Behavior Monitoring Rules
+# Preset rules for detecting anomalies, enforcing policies, and monitoring performance
+
+# ============================================================
+# COST CONTROL RULES
+# ============================================================
+- id: agent-cost-budget-hourly
+  name: "Hourly Cost Budget"
+  description: "Alert when agent exceeds hourly cost budget"
+  condition: "cost_usd_hourly > 5.0"
+  priority: 100
+  enabled: true
+  tags: ["cost", "budget", "critical"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "budget_exceeded", severity: "high" }
+    - type: TRIGGER_AUDIT
+      params: { reason: "cost_budget_exceeded" }
+
+- id: agent-cost-spike
+  name: "Cost Spike Detection"
+  description: "Detect sudden cost increases"
+  condition: "cost_usd_last_5min > cost_usd_avg_5min * 5"
+  priority: 95
+  enabled: true
+  tags: ["cost", "anomaly"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "cost_spike", severity: "high" }
+
+- id: agent-token-explosion
+  name: "Token Explosion"
+  description: "Detect single requests consuming excessive tokens"
+  condition: "total_tokens > 100000"
+  priority: 90
+  enabled: true
+  tags: ["tokens", "cost", "anomaly"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "token_explosion", severity: "medium" }
+
+# ============================================================
+# SAFETY & SECURITY RULES
+# ============================================================
+- id: agent-prompt-injection
+  name: "Prompt Injection Detection"
+  description: "Detect potential prompt injection attempts"
+  condition: "has_prompt_injection_markers == True"
+  priority: 100
+  enabled: true
+  tags: ["security", "injection", "critical"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "prompt_injection", severity: "critical" }
+    - type: BLOCK_USER
+      params: { reason: "prompt_injection_detected" }
+    - type: TRIGGER_AUDIT
+      params: { reason: "security_incident" }
+
+- id: agent-unauthorized-tool
+  name: "Unauthorized Tool Access"
+  description: "Detect agent using tools not in its allowed list"
+  condition: "tool_name not in allowed_tools"
+  priority: 85
+  enabled: true
+  tags: ["security", "tool", "policy"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "tool_abuse", severity: "high" }
+    - type: TRIGGER_AUDIT
+      params: { reason: "unauthorized_tool_access" }
+
+- id: agent-data-exfiltration
+  name: "Data Exfiltration Detection"
+  description: "Detect potential data exfiltration via tool outputs"
+  condition: "tool_type == 'network' and output_size > 10000"
+  priority: 95
+  enabled: true
+  tags: ["security", "data", "critical"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "data_exfiltration", severity: "critical" }
+    - type: TRIGGER_AUDIT
+      params: { reason: "data_exfiltration_attempt" }
+
+# ============================================================
+# PERFORMANCE RULES
+# ============================================================
+- id: agent-latency-sla
+  name: "Latency SLA"
+  description: "Alert when agent response latency exceeds SLA"
+  condition: "avg_latency_ms > 10000"
+  priority: 70
+  enabled: true
+  tags: ["performance", "latency", "sla"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "latency_degradation", severity: "medium" }
+
+- id: agent-timeout-cascade
+  name: "Timeout Cascade"
+  description: "Detect cascading timeouts across agent chain"
+  condition: "timeout_count_5min >= 3"
+  priority: 90
+  enabled: true
+  tags: ["performance", "timeout", "cascade"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "timeout_cascade", severity: "critical" }
+
+- id: agent-error-rate-spike
+  name: "Error Rate Spike"
+  description: "Detect sudden increase in error rate"
+  condition: "error_rate_5min > 0.3"
+  priority: 80
+  enabled: true
+  tags: ["performance", "error", "anomaly"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "error_rate_spike", severity: "high" }
+
+# ============================================================
+# LOOP & PATTERN ANOMALY RULES
+# ============================================================
+- id: agent-dead-loop
+  name: "Dead Loop Detection"
+  description: "Detect agent stuck in repetitive behavior"
+  condition: "same_action_count_1min >= 5"
+  priority: 95
+  enabled: true
+  tags: ["anomaly", "loop", "critical"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "dead_loop", severity: "high" }
+    - type: TRIGGER_AUDIT
+      params: { reason: "agent_stuck_in_loop" }
+
+- id: agent-oscillation
+  name: "Behavior Oscillation"
+  description: "Detect agent alternating between two states"
+  condition: "oscillation_pattern_detected == True"
+  priority: 80
+  enabled: true
+  tags: ["anomaly", "pattern"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "oscillation", severity: "medium" }
+
+- id: agent-infinite-retry
+  name: "Infinite Retry"
+  description: "Detect agent retrying same operation endlessly"
+  condition: "retry_count > 10"
+  priority: 85
+  enabled: true
+  tags: ["anomaly", "retry"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "infinite_retry", severity: "high" }
+
+# ============================================================
+# MULTI-AGENT RULES
+# ============================================================
+- id: agent-delegation-depth
+  name: "Delegation Chain Limit"
+  description: "Limit depth of agent delegation chains"
+  condition: "delegation_depth > 5"
+  priority: 75
+  enabled: true
+  tags: ["multi-agent", "delegation", "safety"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "policy_violation", severity: "medium" }
+
+- id: agent-resource-contention
+  name: "Resource Contention"
+  description: "Detect multiple agents competing for same resource"
+  condition: "concurrent_agents_on_resource >= 3"
+  priority: 65
+  enabled: true
+  tags: ["multi-agent", "resource", "contention"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "resource_contention", severity: "medium" }
+
+- id: agent-cascading-failure
+  name: "Cascading Failure"
+  description: "Detect failure propagation across agent network"
+  condition: "failed_agents_in_chain >= 2"
+  priority: 90
+  enabled: true
+  tags: ["multi-agent", "failure", "cascade"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "cascading_failure", severity: "critical" }
+
+# ============================================================
+# COMPLIANCE & GOVERNANCE RULES
+# ============================================================
+- id: agent-audit-trail
+  name: "Audit Trail Requirement"
+  description: "Ensure all high-risk actions are logged"
+  condition: "risk_score > 0.7 and has_audit_log == False"
+  priority: 80
+  enabled: true
+  tags: ["compliance", "audit"]
+  actions:
+    - type: TRIGGER_AUDIT
+      params: { reason: "missing_audit_trail" }
+
+- id: agent-pii-access
+  name: "PII Access Monitoring"
+  description: "Monitor agent access to PII data"
+  condition: "accesses_pii_data == True"
+  priority: 85
+  enabled: true
+  tags: ["compliance", "privacy", "pii"]
+  actions:
+    - type: TAG_USER
+      params: { tag: "pii_accessor", value: "true" }
+    - type: TRIGGER_AUDIT
+      params: { reason: "pii_data_access" }
+
+- id: agent-model-compliance
+  name: "Model Compliance"
+  description: "Ensure agent uses only approved models"
+  condition: "model_name not in approved_models"
+  priority: 70
+  enabled: true
+  tags: ["compliance", "model"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "policy_violation", severity: "medium" }
+
+# ============================================================
+# EFFICIENCY RULES
+# ============================================================
+- id: agent-inefficient-tool-use
+  name: "Inefficient Tool Usage"
+  description: "Detect agent using expensive tools when cheaper alternatives exist"
+  condition: "tool_cost_ratio > 0.8 and cheaper_alternative_available == True"
+  priority: 50
+  enabled: true
+  tags: ["efficiency", "cost", "optimization"]
+  actions:
+    - type: TAG_USER
+      params: { tag: "inefficient_tool_use", value: "true" }
+
+- id: agent-idle-detection
+  name: "Agent Idle Detection"
+  description: "Detect agents that are registered but not performing tasks"
+  condition: "idle_duration_minutes > 60 and status == 'active'"
+  priority: 40
+  enabled: true
+  tags: ["efficiency", "idle"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "idle_agent", severity: "low" }
+
+- id: agent-capability-drift
+  name: "Capability Drift"
+  description: "Detect agent behavior deviating from its baseline"
+  condition: "capability_drift_score > 0.5"
+  priority: 60
+  enabled: true
+  tags: ["anomaly", "drift", "capability"]
+  actions:
+    - type: ALERT
+      params: { alert_type: "capability_drift", severity: "medium" }
+    - type: TAG_USER
+      params: { tag: "capability_drifted", value: "true" }

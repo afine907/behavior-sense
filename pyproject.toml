@@ -86,6 +86,8 @@ dev = [
 [tool.uv.workspace]
 members = [
     "libs/core",
+    "libs/integrations",
+    "libs/sdk",
     "packages/audit",
     "packages/insight",
     "packages/logs",
@@ -97,6 +99,8 @@ members = [
 # 声明 workspace 内包的依赖源
 [tool.uv.sources]
 behavior-core = { workspace = true }
+behavior-integrations = { workspace = true }
+behavior-sdk = { workspace = true }
 behavior-audit = { workspace = true }
 behavior-insight = { workspace = true }
 behavior-logs = { workspace = true }
@@ -107,6 +111,8 @@ behavior-stream = { workspace = true }
 [tool.hatch.build.targets.wheel]
 packages = [
     "libs/core/src/behavior_core",
+    "libs/integrations/src/behavior_integrations",
+    "libs/sdk/src/behavior_sdk",
     "packages/audit/src/behavior_audit",
     "packages/insight/src/behavior_insight",
     "packages/logs/src/behavior_logs",
